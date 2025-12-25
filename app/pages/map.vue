@@ -1,44 +1,56 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import type { AirportWithPrices } from '~/composables/useAPI'
 
 type LngLat = [number, number]
+
+const date = '29/01/2026'
 
 const { data } = await useAPI('/flights', {
   server: false,
   query: {
     origin: 'DUB',
-    date: '29/01/2026',
+    date,
   },
 })
 
-const selected = ref<LngLat[]>([])
+const selected = ref<Array<{ code: string, date: string }>>([])
 
-const onMarkerClick = (coord: LngLat) => {
+const onMarkerClick = (airport: AirportWithPrices) => {
   // toggle in selection
   const idx = selected.value.findIndex(
-    ([lng, lat]) => lng === coord[0] && lat === coord[1]
+    (item) => item.code === airport.iata_code && item.date === date
   )
   if (idx >= 0) {
     selected.value.splice(idx, 1)
   } else {
-    selected.value.push(coord)
+    selected.value.push({ code: airport.iata_code, date })
   }
 }
 
 // GeoJSON LineString from selected markers (in click order)
-const pathGeoJson = computed(() => ({
-  type: 'FeatureCollection' as const,
-  features: selected.value.length < 2
-    ? []
-    : [{
-        type: 'Feature' as const,
-        geometry: {
-          type: 'LineString' as const,
-          coordinates: selected.value
-        },
-        properties: {}
-      }]
-}))
+const pathGeoJson = computed(() => {
+  const coordinates: LngLat[] = selected.value
+    .map((item) => {
+      const airport = data.value?.find((a) => a.iata_code === item.code)
+      return airport ? [airport.longitude_deg, airport.latitude_deg] : null
+    })
+    .filter((coord): coord is LngLat => coord !== null)
+
+  return {
+    type: 'FeatureCollection' as const,
+    features: coordinates.length < 2
+      ? []
+      : [{
+          type: 'Feature' as const,
+          geometry: {
+            type: 'LineString' as const,
+            coordinates
+          },
+          properties: {}
+        }]
+  }
+})
 </script>
 
 <template>
@@ -51,10 +63,10 @@ const pathGeoJson = computed(() => ({
           <template #marker>
             <button
               class="marker"
-              :class="{ active: selected.some(([lng, lat]) =>
-                lng === airport.longitude_deg && lat === airport.latitude_deg
+              :class="{ active: selected.some((item) =>
+                item.code === airport.iata_code && item.date === date
               ) }"
-              @click.stop="onMarkerClick([airport.longitude_deg, airport.latitude_deg])"
+              @click.stop="onMarkerClick(airport)"
             >
               ●
             </button>
