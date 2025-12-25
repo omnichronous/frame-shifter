@@ -2,5 +2,12 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['nuxt-maplibre']
+  modules: ['nuxt-maplibre'],
+  $development: {
+    runtimeConfig: {
+      public: {
+        n8nApi: 'https://omnichronous.app.n8n.cloud/webhook',
+      },
+    },
+  },
 })
