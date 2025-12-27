@@ -1,41 +1,51 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
 import type { AirportWithPrices } from '~/composables/useAPI'
+import type { Leg } from '~/composables/useItinerary'
 
 type LngLat = [number, number]
 
 const date = '29/01/2026'
 
-const { data } = await useAPI('/flights', {
+const { legs, origin, currentOrigin, setOrigin, addDestination } = useItinerary()
+
+// Fetch destinations based on current origin
+const { data: destinations } = await useAPI('/flights', {
   server: false,
-  query: {
-    origin: 'DUB',
+  query: computed(() => ({
+    origin: currentOrigin.value ?? 'DUB',
     date,
-  },
+  })),
 })
 
-const selected = ref<Array<{ code: string, date: string }>>([])
+// Show all airports initially, then only destinations after origin is selected
+const availableAirports = computed(() => {
+  if (!origin.value) {
+    return destinations.value ?? []
+  }
+  return destinations.value ?? []
+})
 
 const onMarkerClick = (airport: AirportWithPrices) => {
-  // toggle in selection
-  const idx = selected.value.findIndex(
-    (item) => item.code === airport.iata_code && item.date === date
-  )
-  if (idx >= 0) {
-    selected.value.splice(idx, 1)
+  if (!origin.value) {
+    setOrigin(
+      airport.iata_code,
+      date,
+      airport.latitude_deg,
+      airport.longitude_deg
+    )
   } else {
-    selected.value.push({ code: airport.iata_code, date })
+    addDestination(
+      airport.iata_code,
+      date,
+      airport.latitude_deg,
+      airport.longitude_deg
+    )
   }
 }
 
-// GeoJSON LineString from selected markers (in click order)
+// GeoJSON LineString from legs
 const pathGeoJson = computed(() => {
-  const coordinates: LngLat[] = selected.value
-    .map((item) => {
-      const airport = data.value?.find((a) => a.iata_code === item.code)
-      return airport ? [airport.longitude_deg, airport.latitude_deg] : null
-    })
-    .filter((coord): coord is LngLat => coord !== null)
+  const coordinates: LngLat[] = legs.value.map((leg: Leg) => [leg.lng, leg.lat])
 
   return {
     type: 'FeatureCollection' as const,
@@ -58,14 +68,15 @@ const pathGeoJson = computed(() => {
     <div class="relative h-screen w-full">
       <MglMap map-style="https://demotiles.maplibre.org/style.json" :center="[0, 0]" :zoom="2">
       <MglMarker
-        v-for="airport in data" :key="airport.id"
+        v-for="airport in availableAirports" :key="airport.id"
         :coordinates="[airport.longitude_deg, airport.latitude_deg]">
         <template #marker>
           <button
             class="marker"
-            :class="{ active: selected.some((item) =>
-              item.code === airport.iata_code && item.date === date
-            ) }"
+            :class="{
+              origin: origin?.code === airport.iata_code,
+              active: legs.some((leg: Leg) => leg.code === airport.iata_code)
+            }"
             @click.stop="onMarkerClick(airport)"
           >
             ●
@@ -119,6 +130,9 @@ const pathGeoJson = computed(() => {
   border: none;
   font-size: 24px;
   cursor: pointer;
+}
+.marker.origin {
+  color: #16a34a;
 }
 .marker.active {
   color: #ff6200;
