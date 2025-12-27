@@ -23,6 +23,12 @@ export const useItinerary = () => {
     legs.value.push({ code, date, lat, lng })
   }
 
+  const undoLast = () => {
+    if (legs.value.length > 0) {
+      legs.value.pop()
+    }
+  }
+
   const reset = () => {
     legs.value = []
   }
@@ -33,6 +39,7 @@ export const useItinerary = () => {
     currentOrigin,
     setOrigin,
     addDestination,
+    undoLast,
     reset,
   }
 }

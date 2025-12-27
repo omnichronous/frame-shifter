@@ -6,7 +6,7 @@ type LngLat = [number, number]
 
 const date = '29/01/2026'
 
-const { legs, origin, currentOrigin, setOrigin, addDestination } = useItinerary()
+const { legs, origin, currentOrigin, setOrigin, addDestination, undoLast } = useItinerary()
 
 // Fetch destinations based on current origin
 const { data: destinations } = await useAPI('/flights', {
@@ -61,6 +61,19 @@ const pathGeoJson = computed(() => {
         }]
   }
 })
+
+const canUndo = computed(() => legs.value.length > 0)
+
+// Keyboard shortcuts
+onMounted(() => {
+  const handleKeydown = (e: KeyboardEvent) => {
+    if (e.key === 'Backspace' && canUndo.value) {
+      undoLast()
+    }
+  }
+  window.addEventListener('keydown', handleKeydown)
+  onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
+})
 </script>
 
 <template>
@@ -102,7 +115,9 @@ const pathGeoJson = computed(() => {
         <div class="flex items-center justify-between gap-4 px-4 py-4">
           <button
             type="button"
-            class="flex-1 h-11 rounded-lg bg-gray-100 text-gray-700 font-medium text-base active:bg-gray-200 transition-colors"
+            class="flex-1 h-11 rounded-lg bg-gray-100 text-gray-700 font-medium text-base active:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            :disabled="!canUndo"
+            @click="undoLast"
           >
             Undo
           </button>
