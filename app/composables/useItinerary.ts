@@ -6,7 +6,10 @@ export interface Leg {
 }
 
 export const useItinerary = () => {
-  const legs = useState<Leg[]>('itinerary-legs', () => [])
+  const legs = useCookie<Leg[]>('itinerary-legs', {
+    default: () => [],
+    watch: true,
+  })
 
   const origin = computed(() => legs.value[0] ?? null)
 
