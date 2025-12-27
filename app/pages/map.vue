@@ -6,7 +6,20 @@ type LngLat = [number, number]
 
 const date = '29/01/2026'
 
+const MARKER_BASE_CLASS = 'rounded-full transition-transform hover:scale-110 cursor-pointer shadow-md border-2 border-white'
+const MARKER_ORIGIN_CLASS = 'w-6 h-6 bg-green-600 ring-4 ring-green-200'
+const MARKER_ACTIVE_CLASS = 'w-4 h-4 bg-orange-600'
+const MARKER_DEFAULT_CLASS = 'w-4 h-4 bg-blue-500'
+
 const { legs, origin, currentOrigin, setOrigin, addDestination, undoLast } = useItinerary()
+
+const createAirportFromLeg = (leg: Leg): AirportWithPrices => ({
+  code: leg.code,
+  name: leg.code,
+  price: 0,
+  lat: leg.lat,
+  long: leg.lng
+})
 
 // Fetch destinations based on current origin
 const { data: destinations } = await useAPI('/flights', {
@@ -17,24 +30,16 @@ const { data: destinations } = await useAPI('/flights', {
   })),
 })
 
-// Show all airports initially, then only destinations after origin is selected
-// Also include airports from legs so intermediate airports in the path are visible
+// Combine destinations from API with airports from the current path
 const availableAirports = computed(() => {
-  const dests = destinations.value ?? []
-  const destCodes = new Set(dests.map(a => a.code))
+  const destinationsFromApi = destinations.value ?? []
+  const destinationCodes = new Set(destinationsFromApi.map(a => a.code))
   
-  // Add airports from legs that aren't already in destinations
-  const legAirports: AirportWithPrices[] = legs.value
-    .filter(leg => !destCodes.has(leg.code))
-    .map(leg => ({
-      code: leg.code,
-      name: leg.code,
-      price: 0,
-      lat: leg.lat,
-      long: leg.lng
-    }))
+  const additionalPathAirports = legs.value
+    .filter(leg => !destinationCodes.has(leg.code))
+    .map(createAirportFromLeg)
   
-  return [...dests, ...legAirports]
+  return [...destinationsFromApi, ...additionalPathAirports]
 })
 
 const onMarkerClick = (airport: AirportWithPrices) => {
@@ -76,14 +81,12 @@ const pathGeoJson = computed(() => {
 
 const canUndo = computed(() => legs.value.length > 0)
 
+const pathAirportCodes = computed(() => new Set(legs.value.map(leg => leg.code)))
+
 const getMarkerClass = (airport: AirportWithPrices) => {
-  const isOrigin = origin.value?.code === airport.code
-  const isInLegs = legs.value.some((leg: Leg) => leg.code === airport.code)
-  return isOrigin
-    ? 'w-6 h-6 bg-green-600 ring-4 ring-green-200'
-    : isInLegs
-    ? 'w-4 h-4 bg-orange-600'
-    : 'w-4 h-4 bg-blue-500'
+  if (origin.value?.code === airport.code) return MARKER_ORIGIN_CLASS
+  if (pathAirportCodes.value.has(airport.code)) return MARKER_ACTIVE_CLASS
+  return MARKER_DEFAULT_CLASS
 }
 
 // Keyboard shortcuts
@@ -107,8 +110,7 @@ onMounted(() => {
         :coordinates="[airport.long, airport.lat]">
         <template #marker>
           <button
-            class="rounded-full transition-transform hover:scale-110 cursor-pointer shadow-md border-2 border-white"
-            :class="getMarkerClass(airport)"
+            :class="[MARKER_BASE_CLASS, getMarkerClass(airport)]"
             @click.stop="onMarkerClick(airport)"
           />
         </template>
