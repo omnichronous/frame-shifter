@@ -28,17 +28,17 @@ const availableAirports = computed(() => {
 const onMarkerClick = (airport: AirportWithPrices) => {
   if (!origin.value) {
     setOrigin(
-      airport.iata_code,
+      airport.code,
       date,
-      airport.latitude_deg,
-      airport.longitude_deg
+      airport.lat,
+      airport.long
     )
   } else {
     addDestination(
-      airport.iata_code,
+      airport.code,
       date,
-      airport.latitude_deg,
-      airport.longitude_deg
+      airport.lat,
+      airport.long
     )
   }
 }
@@ -81,14 +81,14 @@ onMounted(() => {
     <div class="relative h-screen w-full">
       <MglMap map-style="https://demotiles.maplibre.org/style.json" :center="[0, 0]" :zoom="2">
       <MglMarker
-        v-for="airport in availableAirports" :key="airport.id"
-        :coordinates="[airport.longitude_deg, airport.latitude_deg]">
+        v-for="airport in availableAirports" :key="airport.code"
+        :coordinates="[airport.long, airport.lat]">
         <template #marker>
           <button
             class="marker"
             :class="{
-              origin: origin?.code === airport.iata_code,
-              active: legs.some((leg: Leg) => leg.code === airport.iata_code)
+              origin: origin?.code === airport.code,
+              active: legs.some((leg: Leg) => leg.code === airport.code)
             }"
             @click.stop="onMarkerClick(airport)"
           >
