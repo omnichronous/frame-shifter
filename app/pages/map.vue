@@ -18,11 +18,23 @@ const { data: destinations } = await useAPI('/flights', {
 })
 
 // Show all airports initially, then only destinations after origin is selected
+// Also include airports from legs so intermediate airports in the path are visible
 const availableAirports = computed(() => {
-  if (!origin.value) {
-    return destinations.value ?? []
-  }
-  return destinations.value ?? []
+  const dests = destinations.value ?? []
+  const destCodes = new Set(dests.map(a => a.code))
+  
+  // Add airports from legs that aren't already in destinations
+  const legAirports: AirportWithPrices[] = legs.value
+    .filter(leg => !destCodes.has(leg.code))
+    .map(leg => ({
+      code: leg.code,
+      name: leg.code,
+      price: 0,
+      lat: leg.lat,
+      long: leg.lng
+    }))
+  
+  return [...dests, ...legAirports]
 })
 
 const onMarkerClick = (airport: AirportWithPrices) => {
@@ -64,6 +76,16 @@ const pathGeoJson = computed(() => {
 
 const canUndo = computed(() => legs.value.length > 0)
 
+const getMarkerClass = (airport: AirportWithPrices) => {
+  const isOrigin = origin.value?.code === airport.code
+  const isInLegs = legs.value.some((leg: Leg) => leg.code === airport.code)
+  return isOrigin
+    ? 'w-6 h-6 bg-green-600 ring-4 ring-green-200'
+    : isInLegs
+    ? 'w-4 h-4 bg-orange-600'
+    : 'w-4 h-4 bg-blue-500'
+}
+
 // Keyboard shortcuts
 onMounted(() => {
   const handleKeydown = (e: KeyboardEvent) => {
@@ -85,15 +107,10 @@ onMounted(() => {
         :coordinates="[airport.long, airport.lat]">
         <template #marker>
           <button
-            class="marker"
-            :class="{
-              origin: origin?.code === airport.code,
-              active: legs.some((leg: Leg) => leg.code === airport.code)
-            }"
+            class="rounded-full transition-transform hover:scale-110 cursor-pointer shadow-md border-2 border-white"
+            :class="getMarkerClass(airport)"
             @click.stop="onMarkerClick(airport)"
-          >
-            ●
-          </button>
+          />
         </template>
       </MglMarker>
 
@@ -138,18 +155,3 @@ onMounted(() => {
     </div>
   </ClientOnly>
 </template>
-
-<style scoped>
-.marker {
-  background: transparent;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-}
-.marker.origin {
-  color: #16a34a;
-}
-.marker.active {
-  color: #ff6200;
-}
-</style>
