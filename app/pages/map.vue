@@ -55,36 +55,60 @@ const pathGeoJson = computed(() => {
 
 <template>
   <ClientOnly>
-    <div style="height: 100vh; width: 100%">
+    <div class="relative h-screen w-full">
       <MglMap map-style="https://demotiles.maplibre.org/style.json" :center="[0, 0]" :zoom="2">
-        <MglMarker
-          v-for="airport in data" :key="airport.id"
-          :coordinates="[airport.longitude_deg, airport.latitude_deg]">
-          <template #marker>
-            <button
-              class="marker"
-              :class="{ active: selected.some((item) =>
-                item.code === airport.iata_code && item.date === date
-              ) }"
-              @click.stop="onMarkerClick(airport)"
-            >
-              ●
-            </button>
-          </template>
-        </MglMarker>
+      <MglMarker
+        v-for="airport in data" :key="airport.id"
+        :coordinates="[airport.longitude_deg, airport.latitude_deg]">
+        <template #marker>
+          <button
+            class="marker"
+            :class="{ active: selected.some((item) =>
+              item.code === airport.iata_code && item.date === date
+            ) }"
+            @click.stop="onMarkerClick(airport)"
+          >
+            ●
+          </button>
+        </template>
+      </MglMarker>
 
-        <!-- Path between clicked markers -->
-        <MglGeoJsonSource source-id="clicked-path" :data="pathGeoJson">
-          <MglLineLayer
-            layer-id="clicked-path"
-            :layout="{ 'line-cap': 'round', 'line-join': 'round' }"
-            :paint="{
-              'line-color': '#ff6200',
-              'line-width': 3
-            }"
-          />
-        </MglGeoJsonSource>
+      <!-- Path between clicked markers -->
+      <MglGeoJsonSource source-id="clicked-path" :data="pathGeoJson">
+        <MglLineLayer
+          layer-id="clicked-path"
+          :layout="{ 'line-cap': 'round', 'line-join': 'round' }"
+          :paint="{
+            'line-color': '#ff6200',
+            'line-width': 3
+          }"
+        />
+      </MglGeoJsonSource>
       </MglMap>
+
+      <!-- Bottom Sheet Footer -->
+      <footer class="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-lg">
+        <div class="flex items-center justify-between gap-4 px-4 py-4">
+          <button
+            type="button"
+            class="flex-1 h-11 rounded-lg bg-gray-100 text-gray-700 font-medium text-base active:bg-gray-200 transition-colors"
+          >
+            Undo
+          </button>
+          <!-- <button
+            type="button"
+            class="flex-1 h-11 rounded-lg bg-gray-100 text-gray-700 font-medium text-base active:bg-gray-200 transition-colors"
+          >
+            Add
+          </button> -->
+          <button
+            type="button"
+            class="flex-1 h-11 rounded-lg bg-orange-600 text-white font-medium text-base active:bg-orange-700 transition-colors"
+          >
+            Finish
+          </button>
+        </div>
+      </footer>
     </div>
   </ClientOnly>
 </template>
