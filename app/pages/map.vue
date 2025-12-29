@@ -1,10 +1,18 @@
 <script setup lang="ts">
+import { addDays, format, parse, subDays } from 'date-fns'
 import type { AirportWithPrices } from '~/composables/useAPI'
 import type { Leg } from '~/composables/useItinerary'
 
 type LngLat = [number, number]
 
-const date = '29/01/2026'
+// Date state - HTML input uses YYYY-MM-DD format
+const date = ref('2026-01-29')
+
+// Convert to/from API format (DD/MM/YYYY)
+const dateForApi = computed(() => {
+  const parsed = parse(date.value, 'yyyy-MM-dd', new Date())
+  return format(parsed, 'dd/MM/yyyy')
+})
 
 const MARKER_BASE_CLASS = 'rounded-full transition-transform hover:scale-110 cursor-pointer shadow-md border-2 border-white'
 const MARKER_ORIGIN_CLASS = 'w-6 h-6 bg-green-600 ring-4 ring-green-200'
@@ -26,7 +34,7 @@ const { data: destinations } = await useAPI('/flights', {
   server: false,
   query: computed(() => ({
     origin: currentOrigin.value ?? 'DUB',
-    date,
+    date: dateForApi.value,
   })),
 })
 
@@ -46,17 +54,21 @@ const onMarkerClick = (airport: AirportWithPrices) => {
   if (!origin.value) {
     setOrigin(
       airport.code,
-      date,
+      dateForApi.value,
       airport.lat,
       airport.long
     )
   } else {
     addDestination(
       airport.code,
-      date,
+      dateForApi.value,
       airport.lat,
       airport.long
     )
+    // Add 3 days for next destination
+    const currentDate = parse(date.value, 'yyyy-MM-dd', new Date())
+    const newDate = addDays(currentDate, 3)
+    date.value = format(newDate, 'yyyy-MM-dd')
   }
 }
 
@@ -89,11 +101,25 @@ const getMarkerClass = (airport: AirportWithPrices) => {
   return MARKER_DEFAULT_CLASS
 }
 
+// Custom undo that also reverts the date
+const handleUndo = () => {
+  if (!canUndo.value) return
+  
+  // If undoing a destination (not the origin), subtract 3 days
+  if (legs.value.length > 1) {
+    const currentDate = parse(date.value, 'yyyy-MM-dd', new Date())
+    const newDate = subDays(currentDate, 3)
+    date.value = format(newDate, 'yyyy-MM-dd')
+  }
+  
+  undoLast()
+}
+
 // Keyboard shortcuts
 onMounted(() => {
   const handleKeydown = (e: KeyboardEvent) => {
     if (e.key === 'Backspace' && canUndo.value) {
-      undoLast()
+      handleUndo()
     }
   }
   window.addEventListener('keydown', handleKeydown)
@@ -104,6 +130,29 @@ onMounted(() => {
 <template>
   <ClientOnly>
     <div class="relative h-screen w-full">
+      <!-- Header -->
+      <header class="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
+        <div class="flex items-center gap-3 px-4 py-3">
+          <div class="flex-1">
+            <label class="block text-xs text-gray-600 mb-1">Flying out of</label>
+            <input
+              type="text"
+              :value="currentOrigin || 'Select origin'"
+              readonly
+              class="w-full h-10 px-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 text-sm"
+            >
+          </div>
+          <div class="flex-1">
+            <label class="block text-xs text-gray-600 mb-1">on</label>
+            <input
+              v-model="date"
+              type="date"
+              class="w-full h-10 px-3 border border-gray-300 rounded-lg bg-white text-gray-900 text-sm"
+            >
+          </div>
+        </div>
+      </header>
+
       <MglMap map-style="https://demotiles.maplibre.org/style.json" :center="[0, 0]" :zoom="2">
       <MglMarker
         v-for="airport in availableAirports" :key="airport.code"
@@ -136,7 +185,7 @@ onMounted(() => {
             type="button"
             class="flex-1 h-11 rounded-lg bg-gray-100 text-gray-700 font-medium text-base active:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             :disabled="!canUndo"
-            @click="undoLast"
+            @click="handleUndo"
           >
             Undo
           </button>
