@@ -93,6 +93,8 @@ const pathGeoJson = computed(() => {
 
 const canUndo = computed(() => legs.value.length > 0)
 
+const canFinish = computed(() => legs.value.length >= 2)
+
 const pathAirportCodes = computed(() => new Set(legs.value.map(leg => leg.code)))
 
 const getMarkerClass = (airport: AirportWithPrices) => {
@@ -197,7 +199,9 @@ onMounted(() => {
           </button> -->
           <button
             type="button"
-            class="flex-1 h-11 rounded-lg bg-orange-600 text-white font-medium text-base active:bg-orange-700 transition-colors"
+            class="flex-1 h-11 rounded-lg bg-orange-600 text-white font-medium text-base active:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            :disabled="!canFinish"
+            @click="navigateTo('/bookings')"
           >
             Finish
           </button>

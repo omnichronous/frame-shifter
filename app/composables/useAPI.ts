@@ -8,6 +8,23 @@ export interface AirportWithPrices {
   long: number
 }
 
+export interface TripRequest {
+  fly_from: string
+  fly_to: string
+  date_from: string
+  date_to: string
+}
+
+export interface TripOption {
+  price: number
+  duration: number
+  deep_link: string
+}
+
+export interface TripResponse {
+  data: TripOption[]
+}
+
 
 export function useAPI<T = AirportWithPrices[]>(
   url: string | (() => string),
