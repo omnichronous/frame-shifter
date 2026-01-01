@@ -15,9 +15,11 @@ const dateForApi = computed(() => {
 })
 
 const MARKER_BASE_CLASS = 'rounded-full transition-transform hover:scale-110 cursor-pointer shadow-md border-2 border-white'
+const MARKER_PRICE_CLASS = 'px-2 py-1 text-xs font-semibold whitespace-nowrap'
+const MARKER_DOT_CLASS = 'w-4 h-4'
 const MARKER_ORIGIN_CLASS = 'w-6 h-6 bg-green-600 ring-4 ring-green-200'
-const MARKER_ACTIVE_CLASS = 'w-4 h-4 bg-orange-600'
-const MARKER_DEFAULT_CLASS = 'w-4 h-4 bg-blue-500'
+const MARKER_ACTIVE_CLASS = 'bg-orange-600'
+const MARKER_DEFAULT_CLASS = 'bg-blue-500 text-white'
 
 const { legs, origin, currentOrigin, setOrigin, addDestination, undoLast } = useItinerary()
 
@@ -97,11 +99,30 @@ const canFinish = computed(() => legs.value.length >= 2)
 
 const pathAirportCodes = computed(() => new Set(legs.value.map(leg => leg.code)))
 
+const isSelected = (airport: AirportWithPrices) => {
+  return origin.value?.code === airport.code || pathAirportCodes.value.has(airport.code)
+}
+
 const getMarkerClass = (airport: AirportWithPrices) => {
   if (origin.value?.code === airport.code) return MARKER_ORIGIN_CLASS
   if (pathAirportCodes.value.has(airport.code)) return MARKER_ACTIVE_CLASS
   return MARKER_DEFAULT_CLASS
 }
+
+const formatPrice = (price: number): string => {
+  if (price === 0) return '€0'
+  if (price >= 1000) return `€${(price / 1000).toFixed(1)}k`
+  return `€${price}`
+}
+
+// Split airports for z-index: unselected first, then selected (on top)
+const unselectedAirports = computed(() => 
+  availableAirports.value.filter(a => !isSelected(a))
+)
+
+const selectedAirports = computed(() => 
+  availableAirports.value.filter(a => isSelected(a))
+)
 
 // Custom undo that also reverts the date
 const handleUndo = () => {
@@ -156,12 +177,29 @@ onMounted(() => {
       </header>
 
       <MglMap map-style="https://demotiles.maplibre.org/style.json" :center="[0, 0]" :zoom="2">
+      <!-- Unselected markers (with prices) -->
       <MglMarker
-        v-for="airport in availableAirports" :key="airport.code"
+        v-for="airport in unselectedAirports" :key="airport.code"
         :coordinates="[airport.long, airport.lat]">
         <template #marker>
           <button
-            :class="[MARKER_BASE_CLASS, getMarkerClass(airport)]"
+            :class="[MARKER_BASE_CLASS, MARKER_PRICE_CLASS, MARKER_DEFAULT_CLASS]"
+            class="!z-10"
+            @click.stop="onMarkerClick(airport)"
+          >
+            {{ formatPrice(airport.price) }}
+          </button>
+        </template>
+      </MglMarker>
+
+      <!-- Selected markers (dots, rendered on top) -->
+      <MglMarker
+        v-for="airport in selectedAirports" :key="`selected-${airport.code}`"
+        :coordinates="[airport.long, airport.lat]">
+        <template #marker>
+          <button
+            :class="[MARKER_BASE_CLASS, MARKER_DOT_CLASS, getMarkerClass(airport)]"
+            class="!z-20"
             @click.stop="onMarkerClick(airport)"
           />
         </template>
