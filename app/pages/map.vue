@@ -274,7 +274,7 @@ onMounted(() => {
         </div>
       </header>
 
-      <MglMap map-style="https://demotiles.maplibre.org/style.json" :center="[0, 0]" :zoom="2">
+      <MglMap map-style="https://demotiles.maplibre.org/style.json" :center="[1.5, 51]" :zoom="4">
       
       <!-- Unselected markers (with prices) -->
       <MglMarker
@@ -284,6 +284,7 @@ onMounted(() => {
           <button
             :class="[MARKER_BASE_CLASS, MARKER_PRICE_CLASS, MARKER_DEFAULT_CLASS]"
             class="!z-10"
+            :aria-label="`Select ${airport.code} for ${formatPrice(airport.price)}`"
             @click.stop="onMarkerClick(airport)"
           >
             {{ formatPrice(airport.price) }}
@@ -299,6 +300,7 @@ onMounted(() => {
           <button
             :class="[MARKER_BASE_CLASS, MARKER_DOT_CLASS, getMarkerClass(airport)]"
             class="!z-20"
+            :aria-label="`Selected airport ${airport.code}`"
             @click.stop="onMarkerClick(airport)"
           />
         </template>
