@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['nuxt-maplibre', '@nuxtjs/tailwindcss'],
+  modules: ['nuxt-maplibre', '@nuxtjs/tailwindcss', '@nuxt/test-utils/module'],
   $development: {
     runtimeConfig: {
       public: {

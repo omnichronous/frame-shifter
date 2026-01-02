@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { addDays, format, parse } from 'date-fns'
-import type { AirportWithPrices } from '~/composables/useAPI'
-import type { Leg } from '~/composables/useItinerary'
 
 type LngLat = [number, number]
 
@@ -181,12 +179,6 @@ const getMarkerClass = (airport: AirportWithPrices) => {
   if (origin.value?.code === airport.code) return MARKER_ORIGIN_CLASS
   if (pathAirportCodes.value.has(airport.code)) return MARKER_ACTIVE_CLASS
   return MARKER_DEFAULT_CLASS
-}
-
-const formatPrice = (price: number): string => {
-  if (price === 0) return '€0'
-  if (price >= 1000) return `€${(price / 1000).toFixed(1)}k`
-  return `€${price}`
 }
 
 // Split airports for z-index: unselected first, then selected (on top)
