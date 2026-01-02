@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { addDays, format, parse } from 'date-fns'
 
+definePageMeta({
+  alias: '/'
+})
+
 type LngLat = [number, number]
 
 // Date state before origin is set
