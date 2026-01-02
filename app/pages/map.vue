@@ -1,18 +1,12 @@
 <script setup lang="ts">
-import { addDays, format, parse, subDays } from 'date-fns'
+import { addDays, format, parse } from 'date-fns'
 import type { AirportWithPrices } from '~/composables/useAPI'
 import type { Leg } from '~/composables/useItinerary'
 
 type LngLat = [number, number]
 
-// Date state - HTML input uses YYYY-MM-DD format
-const date = ref('2026-01-29')
-
-// Convert to/from API format (DD/MM/YYYY)
-const dateForApi = computed(() => {
-  const parsed = parse(date.value, 'yyyy-MM-dd', new Date())
-  return format(parsed, 'dd/MM/yyyy')
-})
+// Date state before origin is set
+const pendingDate = ref('2026-01-29')
 
 const MARKER_BASE_CLASS = 'rounded-full transition-transform hover:scale-110 cursor-pointer shadow-md border-2 border-white'
 const MARKER_PRICE_CLASS = 'px-2 py-1 text-xs font-semibold whitespace-nowrap'
@@ -21,7 +15,39 @@ const MARKER_ORIGIN_CLASS = 'w-6 h-6 bg-green-600 ring-4 ring-green-200'
 const MARKER_ACTIVE_CLASS = 'bg-orange-600'
 const MARKER_DEFAULT_CLASS = 'bg-blue-500 text-white'
 
-const { legs, origin, currentOrigin, setOrigin, addDestination, undoLast } = useItinerary()
+const { legs, origin, currentOrigin, currentOriginDate, setOrigin, addDestination, updateCurrentOriginDate, undoLast } = useItinerary()
+
+// Writable computed that reads/writes date from legs or pendingDate
+const currentDate = computed({
+  get: () => {
+    if (!currentOriginDate.value) {
+      return pendingDate.value
+    }
+    // Convert from API format (DD/MM/YYYY) to HTML input format (YYYY-MM-DD)
+    const parsed = parse(currentOriginDate.value, 'dd/MM/yyyy', new Date())
+    return format(parsed, 'yyyy-MM-dd')
+  },
+  set: (value: string) => {
+    // Convert from HTML input format (YYYY-MM-DD) to API format (DD/MM/YYYY)
+    const parsed = parse(value, 'yyyy-MM-dd', new Date())
+    const apiFormat = format(parsed, 'dd/MM/yyyy')
+    
+    if (!currentOriginDate.value) {
+      pendingDate.value = value
+    } else {
+      updateCurrentOriginDate(apiFormat)
+    }
+  }
+})
+
+// Convert current date to API format for queries
+const dateForApi = computed(() => {
+  if (!currentOriginDate.value) {
+    const parsed = parse(pendingDate.value, 'yyyy-MM-dd', new Date())
+    return format(parsed, 'dd/MM/yyyy')
+  }
+  return currentOriginDate.value
+})
 
 const createAirportFromLeg = (leg: Leg): AirportWithPrices => ({
   code: leg.code,
@@ -31,13 +57,58 @@ const createAirportFromLeg = (leg: Leg): AirportWithPrices => ({
   long: leg.lng
 })
 
-// Fetch destinations based on current origin
-const { data: destinations } = await useAPI('/flights', {
+// Airport search for origin selector
+interface AirportOption {
+  code: string
+  name: string
+  lat: number
+  lng: number
+  municipality: string
+  country: string
+}
+
+const searchQuery = ref('')
+const showAirportDropdown = ref(false)
+
+const { data: airportOptions } = useFetch<AirportOption[]>('/api/airports', {
+  query: computed(() => ({ q: searchQuery.value })),
+  server: false,
+})
+
+const onAirportSelect = (airport: AirportOption) => {
+  setOrigin(airport.code, dateForApi.value, airport.lat, airport.lng)
+  searchQuery.value = ''
+  showAirportDropdown.value = false
+  // Watch will trigger fetchDestinations
+}
+
+const formatAirportOption = (airport: AirportOption) => {
+  return `${airport.code} - ${airport.name}${airport.municipality ? `, ${airport.municipality}` : ''} (${airport.country})`
+}
+
+const handleSearchBlur = () => {
+  // Delay hiding dropdown to allow click events to fire
+  window.setTimeout(() => {
+    showAirportDropdown.value = false
+  }, 200)
+}
+
+// Fetch destinations based on current origin (only when origin is set)
+const { data: destinations, execute: fetchDestinations } = await useAPI('/flights', {
   server: false,
   query: computed(() => ({
-    origin: currentOrigin.value ?? 'DUB',
+    origin: currentOrigin.value,
     date: dateForApi.value,
   })),
+  immediate: !!currentOrigin.value,
+  watch: false,
+})
+
+// Watch for date/origin changes and refetch destinations
+watch([currentOrigin, currentOriginDate], ([newOrigin, newDate]) => {
+  if (newOrigin && newDate) {
+    fetchDestinations()
+  }
 })
 
 // Combine destinations from API with airports from the current path
@@ -60,17 +131,20 @@ const onMarkerClick = (airport: AirportWithPrices) => {
       airport.lat,
       airport.long
     )
+    // Watch will trigger fetchDestinations
   } else {
+    // Calculate new date (+3 days) and add destination in one atomic operation
+    const parsedDate = parse(currentDate.value, 'yyyy-MM-dd', new Date())
+    const newDate = addDays(parsedDate, 3)
+    const newDateApi = format(newDate, 'dd/MM/yyyy')
+    
     addDestination(
       airport.code,
-      dateForApi.value,
+      newDateApi,
       airport.lat,
       airport.long
     )
-    // Add 3 days for next destination
-    const currentDate = parse(date.value, 'yyyy-MM-dd', new Date())
-    const newDate = addDays(currentDate, 3)
-    date.value = format(newDate, 'yyyy-MM-dd')
+    // Watch will trigger fetchDestinations
   }
 }
 
@@ -124,17 +198,9 @@ const selectedAirports = computed(() =>
   availableAirports.value.filter(a => isSelected(a))
 )
 
-// Custom undo that also reverts the date
+// Undo - removing leg automatically reverts its date
 const handleUndo = () => {
   if (!canUndo.value) return
-  
-  // If undoing a destination (not the origin), subtract 3 days
-  if (legs.value.length > 1) {
-    const currentDate = parse(date.value, 'yyyy-MM-dd', new Date())
-    const newDate = subDays(currentDate, 3)
-    date.value = format(newDate, 'yyyy-MM-dd')
-  }
-  
   undoLast()
 }
 
@@ -156,19 +222,55 @@ onMounted(() => {
       <!-- Header -->
       <header class="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
         <div class="flex items-center gap-3 px-4 py-3">
-          <div class="flex-1">
+          <div class="flex-1 relative">
             <label class="block text-xs text-gray-600 mb-1">Flying out of</label>
-            <input
-              type="text"
-              :value="currentOrigin || 'Select origin'"
-              readonly
-              class="w-full h-10 px-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 text-sm"
+            <div class="relative">
+              <input
+                v-if="!currentOrigin"
+                v-model="searchQuery"
+                type="text"
+                placeholder="Search airports..."
+                class="w-full h-10 px-3 border border-gray-300 rounded-lg bg-white text-gray-900 text-sm"
+                @focus="showAirportDropdown = true"
+                @blur="handleSearchBlur"
+              >
+              <input
+                v-else
+                type="text"
+                :value="currentOrigin"
+                readonly
+                class="w-full h-10 px-3 pr-10 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 text-sm"
+              >
+              <button
+                v-if="currentOrigin"
+                type="button"
+                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                @click="undoLast()"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <!-- Airport dropdown -->
+            <div
+              v-if="showAirportDropdown && !currentOrigin && airportOptions?.length"
+              class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto z-50"
             >
+              <button
+                v-for="airport in airportOptions"
+                :key="airport.code"
+                type="button"
+                class="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                @mousedown.prevent="onAirportSelect(airport)"
+              >
+                {{ formatAirportOption(airport) }}
+              </button>
+            </div>
           </div>
           <div class="flex-1">
             <label class="block text-xs text-gray-600 mb-1">on</label>
             <input
-              v-model="date"
+              v-model="currentDate"
               type="date"
               class="w-full h-10 px-3 border border-gray-300 rounded-lg bg-white text-gray-900 text-sm"
             >
@@ -177,6 +279,7 @@ onMounted(() => {
       </header>
 
       <MglMap map-style="https://demotiles.maplibre.org/style.json" :center="[0, 0]" :zoom="2">
+      
       <!-- Unselected markers (with prices) -->
       <MglMarker
         v-for="airport in unselectedAirports" :key="airport.code"

@@ -14,7 +14,11 @@
     "date-fns": "^4.1.0",
     "nuxt": "^4.2.2",
     "nuxt-maplibre": "^1.2.0",
+    "papaparse": "^5.5.3",
     "vue": "^3.5.26",
     "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@types/papaparse": "^5.5.2"
   }
 }

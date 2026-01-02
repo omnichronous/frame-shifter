@@ -18,12 +18,24 @@ export const useItinerary = () => {
     return lastLeg?.code ?? null
   })
 
+  const currentOriginDate = computed(() => {
+    const lastLeg = legs.value[legs.value.length - 1]
+    return lastLeg?.date ?? null
+  })
+
   const setOrigin = (code: string, date: string, lat: number, lng: number) => {
     legs.value = [{ code, date, lat, lng }]
   }
 
   const addDestination = (code: string, date: string, lat: number, lng: number) => {
     legs.value.push({ code, date, lat, lng })
+  }
+
+  const updateCurrentOriginDate = (date: string) => {
+    const lastLeg = legs.value[legs.value.length - 1]
+    if (lastLeg) {
+      lastLeg.date = date
+    }
   }
 
   const undoLast = () => {
@@ -40,8 +52,10 @@ export const useItinerary = () => {
     legs: readonly(legs),
     origin,
     currentOrigin,
+    currentOriginDate,
     setOrigin,
     addDestination,
+    updateCurrentOriginDate,
     undoLast,
     reset,
   }
