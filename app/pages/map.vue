@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { addDays, format, parse } from 'date-fns'
+import type { Map } from 'maplibre-gl'
 
 definePageMeta({
   alias: '/'
@@ -18,6 +19,24 @@ const MARKER_ACTIVE_CLASS = 'bg-orange-600'
 const MARKER_DEFAULT_CLASS = 'bg-blue-500 text-white'
 
 const { legs, origin, currentOrigin, currentOriginDate, setOrigin, addDestination, updateCurrentOriginDate, undoLast } = useItinerary()
+
+// Map instance reference
+const mapInstance = ref<Map | null>(null)
+
+// Initial map center - must be a constant to maintain reference stability.
+// Using [1.5, 51] inline would create a new array on every render,
+// causing Vue to see it as a prop change and reset the map position.
+const INITIAL_MAP_CENTER: [number, number] = [1.5, 51]
+
+// Handler for map load event
+const onMapLoad = (event: { map: Map }) => {
+  mapInstance.value = event.map
+  
+  // Expose map instance for E2E testing
+  if (process.dev || import.meta.env.MODE === 'test') {
+    (window as any).__mapInstance = event.map
+  }
+}
 
 // Writable computed that reads/writes date from legs or pendingDate
 const currentDate = computed({
@@ -210,6 +229,17 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
   onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 })
+
+// Pan to last selected marker
+watch(legs, (newLegs) => {
+  const lastLeg = newLegs[newLegs.length - 1]
+  if (lastLeg && mapInstance.value) {
+    mapInstance.value.flyTo({
+      center: [lastLeg.lng, lastLeg.lat],
+      duration: 800
+    })
+  }
+})
 </script>
 
 <template>
@@ -274,7 +304,7 @@ onMounted(() => {
         </div>
       </header>
 
-      <MglMap map-style="https://demotiles.maplibre.org/style.json" :center="[1.5, 51]" :zoom="4">
+      <MglMap map-style="https://demotiles.maplibre.org/style.json" :center="INITIAL_MAP_CENTER" :zoom="4" @map:load="onMapLoad">
       
       <!-- Unselected markers (with prices) -->
       <MglMarker

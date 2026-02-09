@@ -1,9 +1,20 @@
 import { expect, test } from '@nuxt/test-utils/playwright'
+import type { Page } from '@playwright/test'
 
 const mockDestinations = [
   { code: 'CDG', name: 'Paris Charles de Gaulle', price: 120, lat: 49.01, long: 2.55 },
   { code: 'AMS', name: 'Amsterdam Schiphol', price: 95, lat: 52.31, long: 4.76 },
 ]
+
+// Helper function to get map center coordinates
+async function getMapCenter(page: Page): Promise<{ lng: number; lat: number } | null> {
+  return page.evaluate(() => {
+    const map = (window as any).__mapInstance
+    if (!map || typeof map.getCenter !== 'function') return null
+    const center = map.getCenter()
+    return { lng: center.lng, lat: center.lat }
+  })
+}
 
 test.describe('Map flow', () => {
   test.beforeEach(async ({ context, page }) => {
@@ -178,5 +189,32 @@ test.describe('Map flow', () => {
     // State should persist - origin should still be set and finish enabled
     await expect(page.locator('input[readonly]')).toHaveValue('CDG')
     await expect(page.getByRole('button', { name: 'Finish' })).toBeEnabled()
+  })
+
+  test('map pans to selected marker', async ({ page, goto }) => {
+    await goto('/map', { waitUntil: 'hydration' })
+    
+    // Select origin (LHR: lat 51.47, lng -0.46)
+    await page.getByPlaceholder('Search airports...').fill('London')
+    await page.getByRole('button', { name: /LHR/ }).click()
+    
+    // Wait for flyTo animation (800ms + buffer)
+    await page.waitForTimeout(1000)
+    
+    // Verify map centered on origin
+    const centerAfterOrigin = await getMapCenter(page)
+    expect(centerAfterOrigin?.lat).toBeCloseTo(51.47, 0)
+    expect(centerAfterOrigin?.lng).toBeCloseTo(-0.46, 0)
+    
+    // Click CDG marker (lat 49.01, lng 2.55)
+    await page.getByRole('button', { name: 'Select CDG for €120' }).click()
+    
+    // Wait for flyTo animation
+    await page.waitForTimeout(1000)
+    
+    // Verify map centered on destination
+    const centerAfterDest = await getMapCenter(page)
+    expect(centerAfterDest?.lat).toBeCloseTo(49.01, 0)
+    expect(centerAfterDest?.lng).toBeCloseTo(2.55, 0)
   })
 })
