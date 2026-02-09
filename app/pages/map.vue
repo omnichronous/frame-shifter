@@ -115,7 +115,7 @@ const handleSearchBlur = () => {
 }
 
 // Fetch destinations based on current origin (only when origin is set)
-const { data: destinations, execute: fetchDestinations } = await useAPI('/flights', {
+const { data: destinations, status: destinationStatus, error: destinationError, execute: fetchDestinations } = await useAPI('/flights', {
   server: false,
   query: computed(() => ({
     origin: currentOrigin.value,
@@ -128,9 +128,13 @@ const { data: destinations, execute: fetchDestinations } = await useAPI('/flight
 // Watch for date/origin changes and refetch destinations
 watch([currentOrigin, currentOriginDate], ([newOrigin, newDate]) => {
   if (newOrigin && newDate) {
+    destinations.value = undefined
     fetchDestinations()
   }
 })
+
+const dismissError = ref(false)
+watch(destinationError, () => { dismissError.value = false })
 
 // Combine destinations from API with airports from the current path
 const availableAirports = computed(() => {
@@ -349,6 +353,45 @@ watch(legs, (newLegs) => {
       </MglGeoJsonSource>
       </MglMap>
 
+      <!-- Destination loading overlay -->
+      <Transition name="fade">
+        <div
+          v-if="destinationStatus === 'pending'"
+          class="absolute inset-0 z-40 flex items-center justify-center bg-black/10 pointer-events-none"
+        >
+          <div class="rounded-xl bg-white/90 px-4 py-3 shadow-lg flex items-center gap-2 text-sm font-medium text-gray-600">
+            <svg width="32" height="32" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="text-gray-700" fill="currentColor">
+              <path d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,20a9,9,0,1,1,9-9A9,9,0,0,1,12,21Z" opacity="0.25" />
+              <rect class="origin-center animate-[spin_9s_linear_infinite]" x="11" y="6" rx="1" width="2" height="7" />
+              <rect class="origin-center animate-[spin_0.75s_linear_infinite]" x="11" y="11" rx="1" width="2" height="9" />
+            </svg>
+            Loading destinations…
+          </div>
+        </div>
+      </Transition>
+
+      <!-- Destination error banner -->
+      <div
+        v-if="destinationError && !dismissError"
+        class="absolute bottom-20 left-4 right-4 z-50 flex items-center gap-3 rounded-lg bg-red-50 border border-red-200 px-4 py-3 shadow-lg"
+      >
+        <span class="flex-1 text-sm text-red-700">Failed to load destinations</span>
+        <button
+          type="button"
+          class="text-sm font-medium text-red-700 hover:text-red-900 transition-colors"
+          @click="destinations = undefined; fetchDestinations()"
+        >
+          Retry
+        </button>
+        <button
+          type="button"
+          class="text-red-400 hover:text-red-600 transition-colors"
+          @click="dismissError = true"
+        >
+          ✕
+        </button>
+      </div>
+
       <!-- Bottom Sheet Footer -->
       <footer class="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-lg">
         <div class="flex items-center justify-between gap-4 px-4 py-4">
@@ -379,3 +422,14 @@ watch(legs, (newLegs) => {
     </div>
   </ClientOnly>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>
