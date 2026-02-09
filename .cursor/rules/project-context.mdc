@@ -1,0 +1,35 @@
+---
+description: Frame Shifter domain context, architecture, and technical conventions
+alwaysApply: true
+---
+
+# Frame Shifter
+
+Visual multi-city flight itinerary planner. Users build routes by clicking price markers on a map, then book via deep links.
+
+**No competitor combines all three of:** map with live price markers + click-to-chain multi-city route building + booking. This is the core differentiator.
+
+## Architecture
+
+- **Two pages:** `/map` (route builder) and `/bookings` (trip options + deep links)
+- **Backend:** n8n webhooks on top of Kiwi Tequila API (`one_per_city` param, "to anywhere" search)
+- **State:** cookie-based via `useItinerary` composable (array of `Leg` objects: code, date, lat, lng)
+- **API wrapper:** `useAPI` composable wraps all n8n calls with `useFetch` + base URL from runtime config
+- **Airport search:** server endpoint `/api/airports` reads from local CSV via PapaParse
+
+## Date Conventions
+
+- API format: `dd/MM/yyyy` (Tequila convention)
+- HTML input format: `yyyy-MM-dd`
+- Conversion uses `date-fns` `parse` and `format` — never manual string manipulation
+
+## Current Constraints
+
+- Development cache: week-long cache on every Tequila response in n8n (rate limit protection)
+- Hardcoded +3 days per leg (not yet configurable)
+- No return leg support yet
+- Prices on markers may be stale — no freshness indicator in UI
+
+## Current Phase: Trustworthiness
+
+Priority is data layer reliability and core feature completeness. Do not add UX polish, animations, or new UI features unless they directly support trustworthiness (e.g. price disclaimers, error handling).

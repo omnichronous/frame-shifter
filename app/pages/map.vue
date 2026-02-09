@@ -9,7 +9,7 @@ definePageMeta({
 type LngLat = [number, number]
 
 // Date state before origin is set
-const pendingDate = ref('2026-01-29')
+const pendingDate = ref('2026-09-13')
 
 const MARKER_BASE_CLASS = 'rounded-full transition-transform hover:scale-110 cursor-pointer shadow-md border-2 border-white'
 const MARKER_PRICE_CLASS = 'px-2 py-1 text-xs font-semibold whitespace-nowrap'

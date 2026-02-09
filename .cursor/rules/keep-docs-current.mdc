@@ -1,0 +1,23 @@
+---
+description: Keep project context and product docs updated when architecture or product decisions change
+alwaysApply: true
+---
+
+# Keep Docs Current
+
+When you make a change that affects any of the following, update the corresponding doc:
+
+## .cursor/rules/project-context.mdc
+Update when:
+- A new composable, page, or server endpoint is added
+- Architecture changes (new state pattern, new API integration, new module)
+- A constraint is added or removed (e.g. cache strategy changes, a limitation is fixed)
+- The current phase focus shifts
+
+## PRODUCT.md
+Update when:
+- A roadmap item is completed (check the box)
+- A product decision is made (add to decision log with date + rationale)
+- Competitive landscape changes (new info about a competitor)
+
+Do not update these docs for routine code changes (bug fixes, refactors, style tweaks).
