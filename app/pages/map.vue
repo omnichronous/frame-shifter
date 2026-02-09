@@ -244,7 +244,7 @@ watch(legs, (newLegs) => {
 
 <template>
   <ClientOnly>
-    <div class="relative h-screen w-full">
+    <div class="relative h-screen w-full overflow-hidden">
       <!-- Header -->
       <header class="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
         <div class="flex items-center gap-3 px-4 py-3">
