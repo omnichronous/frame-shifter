@@ -18,7 +18,7 @@ const MARKER_ORIGIN_CLASS = 'w-6 h-6 bg-green-600 ring-4 ring-green-200'
 const MARKER_ACTIVE_CLASS = 'bg-orange-600'
 const MARKER_DEFAULT_CLASS = 'bg-blue-500 text-white'
 
-const { legs, origin, currentOrigin, currentOriginDate, setOrigin, addDestination, updateCurrentOriginDate, undoLast } = useItinerary()
+const { legs, origin, isLoopClosed, currentOrigin, currentOriginDate, setOrigin, addDestination, updateCurrentOriginDate, undoLast } = useItinerary()
 
 // Map instance reference
 const mapInstance = ref<Map | null>(null)
@@ -192,9 +192,65 @@ const pathGeoJson = computed(() => {
   }
 })
 
+// GeoJSON dashed line for return preview (shown when finish modal is open)
+const returnPreviewGeoJson = computed(() => {
+  if (!showFinishModal.value || !origin.value || legs.value.length < 2) {
+    return { type: 'FeatureCollection' as const, features: [] }
+  }
+  const lastLeg = legs.value[legs.value.length - 1]
+  if (!lastLeg) return { type: 'FeatureCollection' as const, features: [] }
+  return {
+    type: 'FeatureCollection' as const,
+    features: [{
+      type: 'Feature' as const,
+      geometry: {
+        type: 'LineString' as const,
+        coordinates: [
+          [lastLeg.lng, lastLeg.lat],
+          [origin.value.lng, origin.value.lat]
+        ] as LngLat[]
+      },
+      properties: {}
+    }]
+  }
+})
+
 const canUndo = computed(() => legs.value.length > 0)
 
 const canFinish = computed(() => legs.value.length >= 2)
+
+const canCloseLoop = computed(() => canFinish.value && !isLoopClosed.value)
+
+// Finish modal state
+const showFinishModal = ref(false)
+
+const handleFinish = () => {
+  if (isLoopClosed.value) {
+    navigateTo('/bookings')
+    return
+  }
+  showFinishModal.value = true
+}
+
+const handleEndInLastCity = () => {
+  showFinishModal.value = false
+  navigateTo('/bookings')
+}
+
+const handleReturnToOrigin = () => {
+  if (!origin.value) return
+  const parsedDate = parse(currentDate.value, 'yyyy-MM-dd', new Date())
+  const newDate = addDays(parsedDate, 3)
+  const newDateApi = format(newDate, 'dd/MM/yyyy')
+  addDestination(origin.value.code, newDateApi, origin.value.lat, origin.value.lng)
+  showFinishModal.value = false
+  navigateTo('/bookings')
+}
+
+const lastLegCode = computed(() => {
+  const lastLeg = legs.value[legs.value.length - 1]
+  return lastLeg?.code ?? ''
+})
 
 const pathAirportCodes = computed(() => new Set(legs.value.map(leg => leg.code)))
 
@@ -331,7 +387,31 @@ watch(legs, (newLegs) => {
         v-for="airport in selectedAirports" :key="`selected-${airport.code}`"
         :coordinates="[airport.long, airport.lat]">
         <template #marker>
+          <!-- Origin marker with return hint -->
+          <div
+            v-if="origin?.code === airport.code && canCloseLoop"
+            class="group relative flex flex-col items-center !z-20"
+          >
+            <div
+              class="absolute bottom-full mb-2 px-2.5 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-medium whitespace-nowrap shadow-lg opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-150 pointer-events-none"
+            >
+              Return to {{ airport.code }}
+              <span class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+            </div>
+            <button
+              type="button"
+              class="relative flex items-center justify-center w-8 h-8 rounded-full bg-green-600 text-white shadow-md border-2 border-white cursor-pointer hover:scale-110 transition-transform"
+              :aria-label="`Return to ${airport.code}`"
+              @click.stop="onMarkerClick(airport)"
+            >
+              <svg class="relative w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+              </svg>
+            </button>
+          </div>
+          <!-- Normal selected marker -->
           <button
+            v-else
             :class="[MARKER_BASE_CLASS, MARKER_DOT_CLASS, getMarkerClass(airport)]"
             class="!z-20"
             :aria-label="`Selected airport ${airport.code}`"
@@ -348,6 +428,19 @@ watch(legs, (newLegs) => {
           :paint="{
             'line-color': '#ff6200',
             'line-width': 3
+          }"
+        />
+      </MglGeoJsonSource>
+
+      <!-- Dashed return preview line (shown when finish modal is open) -->
+      <MglGeoJsonSource source-id="return-preview" :data="returnPreviewGeoJson">
+        <MglLineLayer
+          layer-id="return-preview"
+          :layout="{ 'line-cap': 'round', 'line-join': 'round' }"
+          :paint="{
+            'line-color': '#ff6200',
+            'line-width': 2,
+            'line-dasharray': [4, 4]
           }"
         />
       </MglGeoJsonSource>
@@ -392,6 +485,44 @@ watch(legs, (newLegs) => {
         </button>
       </div>
 
+      <!-- Finish modal -->
+      <Transition name="fade">
+        <div
+          v-if="showFinishModal"
+          class="absolute inset-0 z-50 flex items-center justify-center bg-black/30"
+          @click.self="showFinishModal = false"
+        >
+          <div class="bg-white rounded-xl shadow-lg px-6 py-5 mx-4 max-w-sm w-full">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-base font-semibold text-gray-900">How should your trip end?</h2>
+              <button
+                type="button"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+                @click="showFinishModal = false"
+              >
+                ✕
+              </button>
+            </div>
+            <div class="flex flex-col gap-3">
+              <button
+                type="button"
+                class="w-full h-11 rounded-lg bg-gray-100 text-gray-700 font-medium text-sm active:bg-gray-200 transition-colors"
+                @click="handleEndInLastCity"
+              >
+                End in {{ lastLegCode }}
+              </button>
+              <button
+                type="button"
+                class="w-full h-11 rounded-lg bg-orange-600 text-white font-medium text-sm active:bg-orange-700 transition-colors"
+                @click="handleReturnToOrigin"
+              >
+                Return to {{ origin?.code }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+
       <!-- Bottom Sheet Footer -->
       <footer class="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-lg">
         <div class="flex items-center justify-between gap-4 px-4 py-4">
@@ -413,7 +544,7 @@ watch(legs, (newLegs) => {
             type="button"
             class="flex-1 h-11 rounded-lg bg-orange-600 text-white font-medium text-base active:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             :disabled="!canFinish"
-            @click="navigateTo('/bookings')"
+            @click="handleFinish"
           >
             Finish
           </button>

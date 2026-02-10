@@ -27,7 +27,7 @@ Visual multi-city flight itinerary planner. Users build routes by clicking price
 
 - Development cache: week-long cache on every Tequila response in n8n (rate limit protection)
 - Hardcoded +3 days per leg (not yet configurable)
-- No return leg support yet
+- Return leg supported via Finish modal ("End in [city]" vs "Return to [origin]") and origin marker hint
 - Prices on markers may be stale — no freshness indicator in UI
 
 ## Current Phase: Trustworthiness

@@ -23,7 +23,7 @@ No existing tool combines map-with-prices + click-to-chain route building + book
 ### Phase 1: Trustworthy — "I'd show this to a friend"
 - [ ] Real-time or near-real-time prices (solve caching strategy)
 - [ ] Price freshness indicator / "prices may have changed" disclaimer
-- [ ] Return leg — close the loop back to origin
+- [x] Return leg — close the loop back to origin
 - [ ] Configurable stay duration per city (replace hardcoded +3 days)
 - [ ] Error resilience — clear UX when Tequila is down, rate-limited, or returns empty
 

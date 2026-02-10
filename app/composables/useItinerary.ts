@@ -13,6 +13,13 @@ export const useItinerary = () => {
 
   const origin = computed(() => legs.value[0] ?? null)
 
+  const isLoopClosed = computed(() => {
+    const first = legs.value[0]
+    const last = legs.value[legs.value.length - 1]
+    if (!first || !last || legs.value.length < 2) return false
+    return last.code === first.code
+  })
+
   const currentOrigin = computed(() => {
     const lastLeg = legs.value[legs.value.length - 1]
     return lastLeg?.code ?? null
@@ -51,6 +58,7 @@ export const useItinerary = () => {
   return {
     legs: readonly(legs),
     origin,
+    isLoopClosed,
     currentOrigin,
     currentOriginDate,
     setOrigin,
