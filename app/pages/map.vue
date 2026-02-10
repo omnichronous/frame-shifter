@@ -254,6 +254,11 @@ const lastLegCode = computed(() => {
 
 const pathAirportCodes = computed(() => new Set(legs.value.map(leg => leg.code)))
 
+const isLastLeg = (airport: AirportWithPrices) => {
+  const lastLeg = legs.value[legs.value.length - 1]
+  return lastLeg?.code === airport.code && airport.code !== origin.value?.code
+}
+
 const isSelected = (airport: AirportWithPrices) => {
   return origin.value?.code === airport.code || pathAirportCodes.value.has(airport.code)
 }
@@ -406,6 +411,29 @@ watch(legs, (newLegs) => {
             >
               <svg class="relative w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+              </svg>
+            </button>
+          </div>
+          <!-- Last leg marker with end-here hint -->
+          <div
+            v-else-if="isLastLeg(airport) && canCloseLoop"
+            class="group relative flex flex-col items-center !z-20"
+          >
+            <div
+              class="absolute bottom-full mb-2 px-2.5 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-medium whitespace-nowrap shadow-lg opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-150 pointer-events-none"
+            >
+              End in {{ airport.code }}
+              <span class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+            </div>
+            <button
+              type="button"
+              class="relative flex items-center justify-center w-8 h-8 rounded-full bg-orange-600 text-white shadow-md border-2 border-white cursor-pointer hover:scale-110 transition-transform"
+              :aria-label="`End in ${airport.code}`"
+              @click.stop="handleEndInLastCity"
+            >
+              <svg class="relative w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
               </svg>
             </button>
           </div>
