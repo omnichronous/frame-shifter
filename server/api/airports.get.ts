@@ -1,5 +1,3 @@
-import { readFileSync } from 'fs'
-import { join } from 'path'
 import Papa from 'papaparse'
 
 interface AirportRow {
@@ -22,14 +20,17 @@ interface Airport {
 
 let airportsCache: Airport[] = []
 
-function loadAirports(): Airport[] {
+async function loadAirports(): Promise<Airport[]> {
   if (airportsCache.length > 0) {
     return airportsCache
   }
 
-  const csvPath = join(process.cwd(), 'app/assets/airports.csv')
-  const csvContent = readFileSync(csvPath, 'utf-8')
-  
+  const csvContent = await useStorage('assets:server').getItem<string>('airports.csv')
+
+  if (!csvContent) {
+    throw createError({ statusCode: 500, statusMessage: 'Failed to load airports data' })
+  }
+
   const parsed = Papa.parse<AirportRow>(csvContent, {
     header: true,
     skipEmptyLines: true,
@@ -49,17 +50,17 @@ function loadAirports(): Airport[] {
   return airportsCache
 }
 
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const searchTerm = (query.q as string || '').toLowerCase().trim()
 
-  const airports = loadAirports()
+  const airports = await loadAirports()
 
   if (!searchTerm) {
     return airports.slice(0, 20)
   }
 
-  const results = airports.filter(airport => 
+  const results = airports.filter(airport =>
     airport.code.toLowerCase().includes(searchTerm) ||
     airport.name.toLowerCase().includes(searchTerm) ||
     airport.municipality.toLowerCase().includes(searchTerm)

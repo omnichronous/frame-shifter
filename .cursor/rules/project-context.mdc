@@ -15,7 +15,8 @@ Visual multi-city flight itinerary planner. Users build routes by clicking price
 - **Backend:** n8n webhooks on top of Kiwi Tequila API (`one_per_city` param, "to anywhere" search)
 - **State:** cookie-based via `useItinerary` composable (array of `Leg` objects: code, date, lat, lng; `isFinished` flag for route completion)
 - **API wrapper:** `useAPI` composable wraps all n8n calls with `useFetch` + base URL from runtime config
-- **Airport search:** server endpoint `/api/airports` reads from local CSV via PapaParse
+- **Airport search:** server endpoint `/api/airports` reads from `server/assets/airports.csv` via Nitro storage + PapaParse
+- **Deployment:** Netlify SSR (`nitro.preset: 'netlify'`), serverless functions for SSR + API routes. Production env var: `NUXT_PUBLIC_N8N_API`
 
 ## Date Conventions
 

@@ -18,6 +18,9 @@ logs
 .fleet
 .idea
 
+# Netlify
+.netlify
+
 # Local env files
 .env
 .env.*

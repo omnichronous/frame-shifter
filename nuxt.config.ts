@@ -3,6 +3,14 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
   modules: ['nuxt-maplibre', '@nuxtjs/tailwindcss', '@nuxt/test-utils/module'],
+  nitro: {
+    preset: 'netlify',
+  },
+  runtimeConfig: {
+    public: {
+      n8nApi: '', // set via NUXT_PUBLIC_N8N_API env var
+    },
+  },
   $development: {
     runtimeConfig: {
       public: {
