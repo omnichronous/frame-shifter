@@ -88,6 +88,23 @@ test.describe('Map flow', () => {
     await expect(page).toHaveURL('/bookings')
   })
 
+  test('clicking origin marker navigates to bookings', async ({ page, goto }) => {
+    await goto('/map', { waitUntil: 'hydration' })
+    
+    // Select origin
+    await page.getByPlaceholder('Search airports...').fill('London')
+    await page.getByRole('button', { name: /LHR/ }).click()
+    
+    // Click CDG marker to create a 2-leg itinerary
+    await page.getByRole('button', { name: 'Select CDG for €120' }).click()
+    
+    // Click the origin return marker (green circle)
+    await page.getByRole('button', { name: 'Return to LHR' }).click()
+    
+    // Should navigate to bookings, same as Finish
+    await expect(page).toHaveURL('/bookings')
+  })
+
   test('clear origin resets state', async ({ page, goto }) => {
     await goto('/map', { waitUntil: 'hydration' })
     
