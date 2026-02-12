@@ -54,3 +54,4 @@ No existing tool combines map-with-prices + click-to-chain route building + book
 | 2026-02-09 | Phase 1 first, no UX polish until data layer is solid | Stale prices kill trust on first use — nothing else matters if "Book Now" shows a different price |
 | 2026-02-09 | Keep week-long cache for development only | Protects Tequila rate limits during dev; production caching strategy TBD |
 | 2026-02-09 | Deep link to Kiwi for booking (affiliate) | Simplest path to bookable results; own booking layer is out of scope for now |
+| 2026-02-12 | Finishing route stays on map, doesn't auto-navigate to bookings | Users need to see their completed route (icons, path) before leaving; prevents disorientation when navigating back |

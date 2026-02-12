@@ -11,6 +11,11 @@ export const useItinerary = () => {
     watch: true,
   })
 
+  const isFinished = useCookie<boolean>('itinerary-finished', {
+    default: () => false,
+    watch: true,
+  })
+
   const origin = computed(() => legs.value[0] ?? null)
 
   const isLoopClosed = computed(() => {
@@ -45,25 +50,40 @@ export const useItinerary = () => {
     }
   }
 
+  const markAsFinished = () => {
+    isFinished.value = true
+  }
+
+  const clearFinished = () => {
+    isFinished.value = false
+  }
+
   const undoLast = () => {
     if (legs.value.length > 0) {
+      if (isFinished.value) {
+        clearFinished()
+      }
       legs.value.pop()
     }
   }
 
   const reset = () => {
     legs.value = []
+    clearFinished()
   }
 
   return {
     legs: readonly(legs),
     origin,
     isLoopClosed,
+    isFinished: readonly(isFinished),
     currentOrigin,
     currentOriginDate,
     setOrigin,
     addDestination,
     updateCurrentOriginDate,
+    markAsFinished,
+    clearFinished,
     undoLast,
     reset,
   }

@@ -18,7 +18,7 @@ const MARKER_ORIGIN_CLASS = 'w-6 h-6 bg-green-600 ring-4 ring-green-200'
 const MARKER_ACTIVE_CLASS = 'bg-orange-600'
 const MARKER_DEFAULT_CLASS = 'bg-blue-500 text-white'
 
-const { legs, origin, isLoopClosed, currentOrigin, currentOriginDate, setOrigin, addDestination, updateCurrentOriginDate, undoLast } = useItinerary()
+const { legs, origin, isLoopClosed, isFinished, currentOrigin, currentOriginDate, setOrigin, addDestination, updateCurrentOriginDate, markAsFinished, undoLast } = useItinerary()
 
 // Map instance reference
 const mapInstance = ref<Map | null>(null)
@@ -35,6 +35,12 @@ const onMapLoad = (event: { map: Map }) => {
   // Expose map instance for E2E testing
   if (process.dev || import.meta.env.MODE === 'test') {
     (window as any).__mapInstance = event.map
+  }
+
+  // Center on last leg if returning with an existing route
+  const lastLeg = legs.value[legs.value.length - 1]
+  if (lastLeg) {
+    event.map.flyTo({ center: [lastLeg.lng, lastLeg.lat], duration: 800 })
   }
 }
 
@@ -127,7 +133,7 @@ const { data: destinations, status: destinationStatus, error: destinationError, 
 
 // Watch for date/origin changes and refetch destinations
 watch([currentOrigin, currentOriginDate], ([newOrigin, newDate]) => {
-  if (newOrigin && newDate) {
+  if (newOrigin && newDate && !isFinished.value) {
     destinations.value = undefined
     fetchDestinations()
   }
@@ -219,14 +225,18 @@ const canUndo = computed(() => legs.value.length > 0)
 
 const canFinish = computed(() => legs.value.length >= 2)
 
-const canCloseLoop = computed(() => canFinish.value && !isLoopClosed.value)
+const canCloseLoop = computed(() => canFinish.value && !isLoopClosed.value && !isFinished.value)
 
 // Finish modal state
 const showFinishModal = ref(false)
 
 const handleFinish = () => {
-  if (isLoopClosed.value) {
+  if (isFinished.value) {
     navigateTo('/bookings')
+    return
+  }
+  if (isLoopClosed.value) {
+    markAsFinished()
     return
   }
   showFinishModal.value = true
@@ -234,7 +244,7 @@ const handleFinish = () => {
 
 const handleEndInLastCity = () => {
   showFinishModal.value = false
-  navigateTo('/bookings')
+  markAsFinished()
 }
 
 const handleReturnToOrigin = () => {
@@ -244,7 +254,7 @@ const handleReturnToOrigin = () => {
   const newDateApi = format(newDate, 'dd/MM/yyyy')
   addDestination(origin.value.code, newDateApi, origin.value.lat, origin.value.lng)
   showFinishModal.value = false
-  navigateTo('/bookings')
+  markAsFinished()
 }
 
 const lastLegCode = computed(() => {
@@ -253,6 +263,14 @@ const lastLegCode = computed(() => {
 })
 
 const pathAirportCodes = computed(() => new Set(legs.value.map(leg => leg.code)))
+
+const legIndex = (airport: AirportWithPrices) => {
+  return legs.value.findIndex(leg => leg.code === airport.code)
+}
+
+const isFirstLeg = (airport: AirportWithPrices) => {
+  return legs.value[0]?.code === airport.code
+}
 
 const isLastLeg = (airport: AirportWithPrices) => {
   const lastLeg = legs.value[legs.value.length - 1]
@@ -271,7 +289,7 @@ const getMarkerClass = (airport: AirportWithPrices) => {
 
 // Split airports for z-index: unselected first, then selected (on top)
 const unselectedAirports = computed(() => 
-  availableAirports.value.filter(a => !isSelected(a))
+  isFinished.value ? [] : availableAirports.value.filter(a => !isSelected(a))
 )
 
 const selectedAirports = computed(() => 
@@ -387,14 +405,45 @@ watch(legs, (newLegs) => {
         </template>
       </MglMarker>
 
-      <!-- Selected markers (dots, rendered on top) -->
+      <!-- Selected markers (rendered on top) -->
       <MglMarker
         v-for="airport in selectedAirports" :key="`selected-${airport.code}`"
         :coordinates="[airport.long, airport.lat]">
         <template #marker>
+          <!-- === FINISHED STATE markers === -->
+          <!-- Departure (first leg) -->
+          <div
+            v-if="isFinished && isFirstLeg(airport)"
+            class="flex items-center justify-center w-8 h-8 rounded-full bg-green-600 text-white shadow-md border-2 border-white pointer-events-none !z-20"
+            :aria-label="`${airport.code} - departure`"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+            </svg>
+          </div>
+          <!-- Arrival (last leg) -->
+          <div
+            v-else-if="isFinished && isLastLeg(airport)"
+            class="flex items-center justify-center w-8 h-8 rounded-full bg-orange-600 text-white shadow-md border-2 border-white pointer-events-none !z-20"
+            :aria-label="`${airport.code} - arrival`"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5" />
+            </svg>
+          </div>
+          <!-- Middle leg (numbered) -->
+          <div
+            v-else-if="isFinished"
+            class="flex items-center justify-center w-8 h-8 rounded-full bg-orange-600 text-white text-xs font-bold shadow-md border-2 border-white pointer-events-none !z-20"
+            :aria-label="`${airport.code} - leg ${legIndex(airport) + 1}`"
+          >
+            {{ legIndex(airport) + 1 }}
+          </div>
+
+          <!-- === BUILDING STATE markers === -->
           <!-- Origin marker with return hint -->
           <div
-            v-if="origin?.code === airport.code && canCloseLoop"
+            v-else-if="origin?.code === airport.code && canCloseLoop"
             class="group relative flex flex-col items-center !z-20"
           >
             <div
@@ -477,7 +526,7 @@ watch(legs, (newLegs) => {
       <!-- Destination loading overlay -->
       <Transition name="fade">
         <div
-          v-if="destinationStatus === 'pending'"
+          v-if="destinationStatus === 'pending' && !isFinished"
           class="absolute inset-0 z-40 flex items-center justify-center bg-black/10 pointer-events-none"
         >
           <div class="rounded-xl bg-white/90 px-4 py-3 shadow-lg flex items-center gap-2 text-sm font-medium text-gray-600">
@@ -574,7 +623,7 @@ watch(legs, (newLegs) => {
             :disabled="!canFinish"
             @click="handleFinish"
           >
-            Finish
+            {{ isFinished ? 'View Bookings' : 'Finish' }}
           </button>
         </div>
       </footer>

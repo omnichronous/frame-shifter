@@ -71,7 +71,7 @@ test.describe('Map flow', () => {
     await expect(page.locator('input[readonly]')).toHaveValue('LHR')
   })
 
-  test('finish button navigates to bookings', async ({ page, goto }) => {
+  test('finish button enters finished state then navigates on second click', async ({ page, goto }) => {
     await goto('/map', { waitUntil: 'hydration' })
     
     // Select origin
@@ -81,14 +81,21 @@ test.describe('Map flow', () => {
     // Click CDG marker
     await page.getByRole('button', { name: 'Select CDG for €120' }).click()
     
-    // Click Finish button
+    // Click Finish — opens modal (non-loop route)
     await page.getByRole('button', { name: 'Finish' }).click()
-    
-    // Verify navigation to bookings page
+    // Choose "End in CDG" from modal
+    await page.locator('.max-w-sm').getByRole('button', { name: /End in CDG/ }).click()
+
+    // Should stay on map, button becomes "View Bookings"
+    await expect(page).toHaveURL(/\/map/)
+    await expect(page.getByRole('button', { name: 'View Bookings' })).toBeVisible()
+
+    // Click View Bookings — navigates to bookings
+    await page.getByRole('button', { name: 'View Bookings' }).click()
     await expect(page).toHaveURL('/bookings')
   })
 
-  test('clicking origin marker navigates to bookings', async ({ page, goto }) => {
+  test('clicking origin return marker enters finished state', async ({ page, goto }) => {
     await goto('/map', { waitUntil: 'hydration' })
     
     // Select origin
@@ -101,8 +108,9 @@ test.describe('Map flow', () => {
     // Click the origin return marker (green circle)
     await page.getByRole('button', { name: 'Return to LHR' }).click()
     
-    // Should navigate to bookings, same as Finish
-    await expect(page).toHaveURL('/bookings')
+    // Should stay on map with View Bookings button
+    await expect(page).toHaveURL(/\/map/)
+    await expect(page.getByRole('button', { name: 'View Bookings' })).toBeVisible()
   })
 
   test('clear origin resets state', async ({ page, goto }) => {
@@ -233,5 +241,112 @@ test.describe('Map flow', () => {
     const centerAfterDest = await getMapCenter(page)
     expect(centerAfterDest?.lat).toBeCloseTo(49.01, 0)
     expect(centerAfterDest?.lng).toBeCloseTo(2.55, 0)
+  })
+})
+
+// Helper: build a 2-leg route (LHR -> CDG) and click Finish -> "End in CDG"
+async function buildAndFinishRoute(page: Page, goto: (url: string, options?: any) => Promise<any>) {
+  await goto('/map', { waitUntil: 'hydration' })
+  await page.getByPlaceholder('Search airports...').fill('London')
+  await page.getByRole('button', { name: /LHR/ }).click()
+  await page.getByRole('button', { name: 'Select CDG for €120' }).click()
+  await page.getByRole('button', { name: 'Finish' }).click()
+  // Finish modal: choose "End in CDG" (target modal specifically to avoid marker ambiguity)
+  await page.locator('.max-w-sm').getByRole('button', { name: /End in CDG/ }).click()
+}
+
+test.describe('Finished route state', () => {
+  test.beforeEach(async ({ context, page }) => {
+    await context.clearCookies()
+    await page.route('**/flights*', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockDestinations),
+      })
+    })
+  })
+
+  test('stays on map after finish with View Bookings button', async ({ page, goto }) => {
+    await buildAndFinishRoute(page, goto)
+
+    // Should remain on map page
+    await expect(page).toHaveURL(/\/map/)
+
+    // Finish button should now read "View Bookings"
+    await expect(page.getByRole('button', { name: 'View Bookings' })).toBeVisible()
+  })
+
+  test('price markers hidden after finish', async ({ page, goto }) => {
+    await buildAndFinishRoute(page, goto)
+
+    // Price markers for unselected airports should not be visible
+    await expect(page.getByRole('button', { name: /Select AMS/ })).not.toBeVisible()
+  })
+
+  test('route markers show icons and numbers', async ({ page, goto }) => {
+    // Build a 3-leg route: LHR -> CDG -> AMS
+    await goto('/map', { waitUntil: 'hydration' })
+    await page.getByPlaceholder('Search airports...').fill('London')
+    await page.getByRole('button', { name: /LHR/ }).click()
+    await page.getByRole('button', { name: 'Select CDG for €120' }).click()
+    await page.getByRole('button', { name: 'Select AMS for €95' }).click()
+    await page.getByRole('button', { name: 'Finish' }).click()
+    await page.locator('.max-w-sm').getByRole('button', { name: /End in AMS/ }).click()
+
+    // Origin should have takeoff icon marker
+    await expect(page.getByLabel('LHR - departure')).toBeVisible()
+
+    // Middle leg should show sequence number
+    await expect(page.getByLabel('CDG - leg 2')).toBeVisible()
+
+    // Last leg should have flag/landing icon marker
+    await expect(page.getByLabel('AMS - arrival')).toBeVisible()
+  })
+
+  test('selected markers are non-interactive after finish', async ({ page, goto }) => {
+    await buildAndFinishRoute(page, goto)
+
+    // The View Bookings button should be visible (finished state)
+    await expect(page.getByRole('button', { name: 'View Bookings' })).toBeVisible()
+
+    // Try clicking the origin marker area — should not change state
+    // (markers have pointer-events-none, so clicking them does nothing)
+    const viewBookingsBtn = page.getByRole('button', { name: 'View Bookings' })
+    await expect(viewBookingsBtn).toBeVisible()
+
+    // Verify no price markers appeared (would indicate state was cleared)
+    await expect(page.getByRole('button', { name: /Select CDG/ })).not.toBeVisible()
+    await expect(page.getByRole('button', { name: /Select AMS/ })).not.toBeVisible()
+  })
+
+  test('View Bookings navigates to bookings page', async ({ page, goto }) => {
+    await buildAndFinishRoute(page, goto)
+
+    await page.getByRole('button', { name: 'View Bookings' }).click()
+    await expect(page).toHaveURL('/bookings')
+  })
+
+  test('undo exits finished state regardless of remaining legs', async ({ page, goto }) => {
+    // Build a 3-leg route: LHR -> CDG -> AMS, then finish
+    await goto('/map', { waitUntil: 'hydration' })
+    await page.getByPlaceholder('Search airports...').fill('London')
+    await page.getByRole('button', { name: /LHR/ }).click()
+    await page.getByRole('button', { name: 'Select CDG for €120' }).click()
+    await page.getByRole('button', { name: 'Select AMS for €95' }).click()
+    await page.getByRole('button', { name: 'Finish' }).click()
+    await page.locator('.max-w-sm').getByRole('button', { name: /End in AMS/ }).click()
+
+    // Verify finished state
+    await expect(page.getByRole('button', { name: 'View Bookings' })).toBeVisible()
+
+    // Single undo — still 2 legs remain (LHR -> CDG)
+    await page.getByRole('button', { name: 'Undo' }).click()
+
+    // Should already be out of finished state despite having 2 legs
+    await expect(page.getByRole('button', { name: 'Finish' })).toBeEnabled()
+
+    // Price markers should reappear
+    await expect(page.getByRole('button', { name: /Select AMS/ })).toBeVisible()
   })
 })

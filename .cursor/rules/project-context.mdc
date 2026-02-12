@@ -13,7 +13,7 @@ Visual multi-city flight itinerary planner. Users build routes by clicking price
 
 - **Two pages:** `/map` (route builder) and `/bookings` (trip options + deep links)
 - **Backend:** n8n webhooks on top of Kiwi Tequila API (`one_per_city` param, "to anywhere" search)
-- **State:** cookie-based via `useItinerary` composable (array of `Leg` objects: code, date, lat, lng)
+- **State:** cookie-based via `useItinerary` composable (array of `Leg` objects: code, date, lat, lng; `isFinished` flag for route completion)
 - **API wrapper:** `useAPI` composable wraps all n8n calls with `useFetch` + base URL from runtime config
 - **Airport search:** server endpoint `/api/airports` reads from local CSV via PapaParse
 
@@ -28,6 +28,7 @@ Visual multi-city flight itinerary planner. Users build routes by clicking price
 - Development cache: week-long cache on every Tequila response in n8n (rate limit protection)
 - Hardcoded +3 days per leg (not yet configurable)
 - Return leg supported via Finish modal ("End in [city]" vs "Return to [origin]") and origin marker hint
+- Finishing enters a "finished" state on the map (icons replace price markers, View Bookings button) — does not auto-navigate to bookings
 - Prices on markers may be stale — no freshness indicator in UI
 
 ## Current Phase: Trustworthiness
