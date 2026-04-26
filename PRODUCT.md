@@ -20,6 +20,8 @@ No existing tool combines map-with-prices + click-to-chain route building + book
 
 ## Roadmap
 
+Product phases and checkboxes live below. **Technical structure targets** (thin pages, map decomposition, SSR boundaries, shared types, trustworthiness-first) live in [`.cursor/rules/architecture-roadmap.mdc`](.cursor/rules/architecture-roadmap.mdc). Agents and contributors should align implementation with that roadmap or explicitly note why not.
+
 ### Phase 1: Trustworthy — "I'd show this to a friend"
 - [ ] Real-time or near-real-time prices (solve caching strategy)
 - [ ] Price freshness indicator / "prices may have changed" disclaimer
@@ -55,3 +57,4 @@ No existing tool combines map-with-prices + click-to-chain route building + book
 | 2026-02-09 | Keep week-long cache for development only | Protects Tequila rate limits during dev; production caching strategy TBD |
 | 2026-02-09 | Deep link to Kiwi for booking (affiliate) | Simplest path to bookable results; own booking layer is out of scope for now |
 | 2026-02-12 | Finishing route stays on map, doesn't auto-navigate to bookings | Users need to see their completed route (icons, path) before leaving; prevents disorientation when navigating back |
+| 2026-04-26 | Architecture roadmap in `.cursor/rules/architecture-roadmap.mdc` | Keeps Nuxt/Vue structure and review checklist in always-applied rules so future work aligns or surfaces gaps |
