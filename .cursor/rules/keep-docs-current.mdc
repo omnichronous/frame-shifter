@@ -14,10 +14,16 @@ Update when:
 - A constraint is added or removed (e.g. cache strategy changes, a limitation is fixed)
 - The current phase focus shifts
 
+## .cursor/rules/architecture-roadmap.mdc
+Update when:
+- Priorities shift (e.g. SPA-only vs SSR, itinerary persistence mechanism, major decomposition done)
+- A milestone listed there is completed and the doc should describe a new baseline
+
 ## PRODUCT.md
 Update when:
 - A roadmap item is completed (check the box)
 - A product decision is made (add to decision log with date + rationale)
 - Competitive landscape changes (new info about a competitor)
+- You add or materially change the architecture roadmap pointer (keep the link to `architecture-roadmap.mdc` accurate)
 
 Do not update these docs for routine code changes (bug fixes, refactors, style tweaks).

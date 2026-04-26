@@ -1,0 +1,51 @@
+---
+description: Nuxt/Vue structure targets and agent checklist so new code aligns and gaps surface
+alwaysApply: true
+---
+
+# Architecture roadmap
+
+Targets for how the codebase should evolve. When you touch route-building, bookings, itinerary state, n8n/Tequila data, or Nitro API routes, read this and either align the change or call out a deliberate exception.
+
+## Current target shape
+
+- **Pages:** `/map` (route builder), `/bookings` (trip options + deep links). Pages stay thin: route-level wiring only.
+- **Backend:** n8n webhooks + Tequila; app-owned reads via Nitro (`/api/airports`, etc.).
+- **Client state:** cookie-based itinerary via `useItinerary` until a product decision changes that.
+- **API client:** `useAPI` / runtime `n8nApi` for external fetches; prefer consistency with Nuxt data-fetching patterns.
+
+## Priorities (in order)
+
+1. **Thin pages, extracted building blocks**
+   - Reusable UI lives under `app/components/` (e.g. map-specific under `components/map/`).
+   - Fetch orchestration, date/stay logic, and non-visual route-builder behavior belong in composables (`app/composables/`), not only in `map.vue`.
+
+2. **Map route decomposition (incremental)**
+   - Marker UI (price / path / finished / return-hint variants) → dedicated components instead of one long template branch.
+   - Destination loading (`/flights` or equivalent) → a composable (clear `pending` / `error` / retry).
+   - Airport search + `/api/airports` → a composable.
+   - Date conversion (`dd/MM/yyyy` ↔ `yyyy-MM-dd`) and hardcoded +3-day stays → one place (composable or util) so configurable stays land in one spot later.
+
+3. **SSR / client boundary**
+   - Do not wrap an entire page in `<ClientOnly>` unless the product explicitly chooses SPA-only (then document in `nuxt.config` + decision log).
+   - Prefer: server-rendered chrome; `<ClientOnly>` only around MapLibre (or other `window`-dependent) subtrees.
+
+4. **Shared types**
+   - Avoid duplicating airport / leg / trip DTO shapes across pages. Prefer one canonical type per concept; align naming (e.g. prefer `lng` consistently with GeoJSON and `Leg`, not mixed `long` / `lng` for the same axis).
+
+5. **Trustworthiness over polish**
+   - Price and booking flows: empty states, errors, retries, stale-price messaging take precedence over animations and purely visual UX (see `project-context.mdc` phase).
+
+## Agent review checklist
+
+Before finishing a task in this area, confirm:
+
+- [ ] Does this change make the relevant **page thinner** or add more monolith surface to `map.vue` / `bookings.vue`?
+- [ ] Does it respect or improve the **client-only boundary** for the map?
+- [ ] Does it **duplicate types or helpers** that already exist (or should be shared)?
+- [ ] Does it affect **price/booking trust** (freshness, errors, empty results)?
+- [ ] If the change **cannot** follow a priority above, state **why** in the PR / reply (product constraint, n8n contract, timebox) so the gap stays visible.
+
+## When to update this file
+
+Update when priorities shift (e.g. SPA-only decision, new server-owned endpoints, itinerary persistence moves off cookies) or when a major decomposition milestone is done so the roadmap reflects the new baseline.

@@ -11,6 +11,8 @@ Visual multi-city flight itinerary planner. Users build routes by clicking price
 
 ## Architecture
 
+Structure targets and an agent checklist: **`.cursor/rules/architecture-roadmap.mdc`**.
+
 - **Two pages:** `/map` (route builder) and `/bookings` (trip options + deep links)
 - **Backend:** n8n webhooks on top of Kiwi Tequila API (`one_per_city` param, "to anywhere" search)
 - **State:** cookie-based via `useItinerary` composable (array of `Leg` objects: code, date, lat, lng; `isFinished` flag for route completion)
