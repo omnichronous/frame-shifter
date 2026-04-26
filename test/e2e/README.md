@@ -6,13 +6,13 @@ End-to-end tests using Playwright with `@nuxt/test-utils/playwright` for proper 
 
 ```bash
 # Standard mode
-npm run test:e2e
+pnpm test:e2e
 
 # UI mode (interactive debugging)
-npm run test:e2e:ui
+pnpm test:e2e:ui
 
 # Headed mode (see browser)
-npm run test:e2e:headed
+pnpm test:e2e:headed
 ```
 
 ## Test Coverage
