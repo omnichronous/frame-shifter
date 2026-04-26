@@ -16,6 +16,11 @@ async function getMapCenter(page: Page): Promise<{ lng: number; lat: number } | 
   })
 }
 
+async function expectMapCenter(page: Page, expected: { lng: number; lat: number }) {
+  await expect.poll(async () => (await getMapCenter(page))?.lat ?? Number.NaN).toBeCloseTo(expected.lat, 0)
+  await expect.poll(async () => (await getMapCenter(page))?.lng ?? Number.NaN).toBeCloseTo(expected.lng, 0)
+}
+
 test.describe('Map flow', () => {
   test.beforeEach(async ({ context, page }) => {
     await context.clearCookies()
@@ -223,24 +228,14 @@ test.describe('Map flow', () => {
     await page.getByPlaceholder('Search airports...').fill('London')
     await page.getByRole('button', { name: /LHR/ }).click()
     
-    // Wait for flyTo animation (800ms + buffer)
-    await page.waitForTimeout(1000)
-    
     // Verify map centered on origin
-    const centerAfterOrigin = await getMapCenter(page)
-    expect(centerAfterOrigin?.lat).toBeCloseTo(51.47, 0)
-    expect(centerAfterOrigin?.lng).toBeCloseTo(-0.46, 0)
+    await expectMapCenter(page, { lat: 51.47, lng: -0.46 })
     
     // Click CDG marker (lat 49.01, lng 2.55)
     await page.getByRole('button', { name: 'Select CDG for €120' }).click()
     
-    // Wait for flyTo animation
-    await page.waitForTimeout(1000)
-    
     // Verify map centered on destination
-    const centerAfterDest = await getMapCenter(page)
-    expect(centerAfterDest?.lat).toBeCloseTo(49.01, 0)
-    expect(centerAfterDest?.lng).toBeCloseTo(2.55, 0)
+    await expectMapCenter(page, { lat: 49.01, lng: 2.55 })
   })
 })
 
