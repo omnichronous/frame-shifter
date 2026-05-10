@@ -1,6 +1,29 @@
-# Nuxt Minimal Starter
+# Frame Shifter
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+Visual multi-city flight itinerary planner. Users build routes by clicking price markers on a map, then book via deep links.
+
+## Architecture
+
+- **Two pages:** `/map` (route builder) and `/bookings` (trip options + deep links)
+- **Backend:** n8n webhooks on top of Kiwi Tequila API (`one_per_city` param, "to anywhere" search)
+- **State:** cookie-based via `useItinerary` composable (array of `Leg` objects: code, date, lat, lng; `isFinished` flag for route completion)
+- **API wrapper:** `useAPI` composable wraps all n8n calls with `useFetch` + base URL from runtime config
+- **Airport search:** server endpoint `/api/airports` reads from `server/assets/airports.csv` via Nitro storage + PapaParse
+- **Deployment:** Netlify SSR (`nitro.preset: 'netlify'`), serverless functions for SSR + API routes. Production env var: `NUXT_PUBLIC_N8N_API`
+
+## Date Conventions
+
+- API format: `dd/MM/yyyy` (Tequila convention)
+- HTML input format: `yyyy-MM-dd`
+- Conversion uses `date-fns` `parse` and `format` — never manual string manipulation
+
+## Current Constraints
+
+- Development cache: week-long cache on every Tequila response in n8n (rate limit protection)
+- Hardcoded +3 days per leg (not yet configurable)
+- Return leg supported via Finish modal ("End in [city]" vs "Return to [origin]") and origin marker hint
+- Finishing enters a "finished" state on the map (icons replace price markers, View Bookings button) — does not auto-navigate to bookings
+- Prices on markers may be stale — no freshness indicator in UI
 
 ## Setup
 
@@ -31,5 +54,3 @@ Locally preview production build:
 ```bash
 pnpm preview
 ```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
