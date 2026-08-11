@@ -9,6 +9,7 @@ export const useItinerary = () => {
   const legs = useCookie<Leg[]>('itinerary-legs', {
     default: () => [],
     watch: true,
+    maxAge: 60 * 10,
   })
 
   const isFinished = useCookie<boolean>('itinerary-finished', {
