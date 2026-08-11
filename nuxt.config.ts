@@ -2,12 +2,23 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['nuxt-maplibre', '@nuxtjs/tailwindcss', '@nuxt/test-utils/module'],
+  modules: ['@sentry/nuxt/module', 'nuxt-maplibre', '@nuxtjs/tailwindcss', '@nuxt/test-utils/module'],
+
+  sentry: {
+    // Netlify does not support the --import CLI flag.
+    // This injects the Sentry server config as a top-level import in the Nitro server entry.
+    autoInjectServerSentry: 'top-level-import',
+  },
+
+  sourcemap: {
+    client: 'hidden',
+    server: true,
+  },
   tailwindcss: {
     // Keep Tailwind config inline; the generated ESM config is loaded through Tailwind's CJS loader.
     quiet: true,
     config: {
-      plugins: [() => {}],
+      plugins: [() => { }],
     },
   },
   nitro: {
@@ -18,6 +29,7 @@ export default defineNuxtConfig({
       n8nApi: '', // set via NUXT_PUBLIC_N8N_API env var
     },
   },
+
   $development: {
     runtimeConfig: {
       public: {
