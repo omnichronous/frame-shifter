@@ -1,4 +1,4 @@
-import { applyItineraryOp, type ItineraryOp, type ItineraryState, type Leg } from '../../shared/itineraryOps'
+import { applyItineraryOp, type ItineraryOp, type ItineraryState, type Leg } from '#shared/itineraryOps'
 
 export type { Leg }
 

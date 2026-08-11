@@ -3,7 +3,7 @@ import {
   isRoomStateMessage,
   type ItineraryOp,
   type ItineraryState,
-} from '../../shared/itineraryOps'
+} from '#shared/itineraryOps'
 
 export type CollabConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error'
 

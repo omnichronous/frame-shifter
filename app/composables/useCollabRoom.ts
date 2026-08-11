@@ -1,5 +1,5 @@
 import PartySocket from 'partysocket'
-import type { ItineraryState } from '../../shared/itineraryOps'
+import type { ItineraryState } from '#shared/itineraryOps'
 import {
   createCollabSocketSession,
   runShareRoomFlow,
