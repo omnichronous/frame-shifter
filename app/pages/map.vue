@@ -19,6 +19,7 @@ const MARKER_ACTIVE_CLASS = 'bg-orange-600'
 const MARKER_DEFAULT_CLASS = 'bg-blue-500 text-white'
 
 const { legs, origin, isLoopClosed, isFinished, currentOrigin, currentOriginDate, setOrigin, addDestination, updateCurrentOriginDate, markAsFinished, undoLast } = useItinerary()
+const { isLive, shareRoom } = useCollabRoom()
 
 // Map instance reference
 const mapInstance = ref<Map | null>(null)
@@ -330,7 +331,7 @@ watch(legs, (newLegs) => {
     <div class="relative h-screen w-full overflow-hidden">
       <!-- Header -->
       <header class="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
-        <div class="flex items-center gap-3 px-4 py-3">
+        <div class="flex items-end gap-3 px-4 py-3">
           <div class="flex-1 relative">
             <label class="block text-xs text-gray-600 mb-1">Flying out of</label>
             <div class="relative">
@@ -383,6 +384,21 @@ watch(legs, (newLegs) => {
               type="date"
               class="w-full h-10 px-3 border border-gray-300 rounded-lg bg-white text-gray-900 text-sm"
             >
+          </div>
+          <div class="flex flex-col items-end gap-1 shrink-0">
+            <span
+              v-if="isLive"
+              class="text-xs font-medium text-green-700"
+              data-testid="collab-live"
+            >Live</span>
+            <button
+              type="button"
+              class="h-10 px-3 border border-gray-300 rounded-lg bg-white text-gray-900 text-sm hover:bg-gray-50"
+              data-testid="share-room"
+              @click="shareRoom()"
+            >
+              Share
+            </button>
           </div>
         </div>
       </header>
