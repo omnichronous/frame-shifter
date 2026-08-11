@@ -8,6 +8,11 @@ export default defineNuxtConfig({
     // Netlify does not support the --import CLI flag.
     // This injects the Sentry server config as a top-level import in the Nitro server entry.
     autoInjectServerSentry: 'top-level-import',
+    sourceMapsUploadOptions: {
+      org: "frame-shift-development",
+      project: "frame-shifter",
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+    },
   },
 
   sourcemap: {
@@ -27,6 +32,11 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       n8nApi: '', // set via NUXT_PUBLIC_N8N_API env var
+      sentryEnvironment: process.env.CONTEXT === 'production'
+        ? 'production'
+        : process.env.CONTEXT === 'deploy-preview'
+          ? `preview-${process.env.REVIEW_ID ?? process.env.BRANCH}`
+          : process.env.CONTEXT || 'development',
     },
   },
 

@@ -8,4 +8,7 @@ Sentry.init({
 
   // Logs
   enableLogs: true,
+
+  environment: process.env.CONTEXT || 'development',
+  release: process.env.COMMIT_REF,
 })
