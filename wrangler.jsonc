@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "collab",
+  "main": "workers/collab/server.ts",
+  "compatibility_date": "2025-07-15",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ItineraryRoom",
+        "class_name": "ItineraryRoom"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["ItineraryRoom"]
+    }
+  ]
+}

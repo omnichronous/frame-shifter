@@ -34,7 +34,8 @@ Product phases and checkboxes live below. **Technical structure targets** (thin 
 - [ ] Marker clustering / zoom handling
 - [ ] Itinerary sidebar or summary strip (route as list with dates + per-leg prices)
 - [ ] Mobile polish — fat-finger tolerance, scroll-vs-pan, marker tap targets
-- [ ] Share / export itinerary (link or calendar)
+- [ ] Share / export itinerary (calendar)
+- [x] Live share link — couples sync route via PartyServer room (`?room=`)
 
 ### Phase 3: Complete — "Why would I use Kiwi instead"
 - [ ] Flexible date search per leg ("cheapest this week")
@@ -58,3 +59,5 @@ Product phases and checkboxes live below. **Technical structure targets** (thin 
 | 2026-02-09 | Deep link to Kiwi for booking (affiliate) | Simplest path to bookable results; own booking layer is out of scope for now |
 | 2026-02-12 | Finishing route stays on map, doesn't auto-navigate to bookings | Users need to see their completed route (icons, path) before leaving; prevents disorientation when navigating back |
 | 2026-04-26 | Architecture roadmap in `.cursor/rules/architecture-roadmap.mdc` | Keeps Nuxt/Vue structure and review checklist in always-applied rules so future work aligns or surfaces gaps |
+| 2026-08-11 | Couples collab via PartyKit; sync legs only, not prices | Netlify cannot hold WebSockets; Tequila rate limits block live price polling; anonymous `?room=` share is enough for couples |
+| 2026-08-11 | Collab host = PartyServer + wrangler on own CF account | Legacy `partykit.dev` zone hit custom-domain cap; Cloudflare recommends PartyServer/Durable Objects |

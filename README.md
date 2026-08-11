@@ -6,10 +6,11 @@ Visual multi-city flight itinerary planner. Users build routes by clicking price
 
 - **Two pages:** `/map` (route builder) and `/bookings` (trip options + deep links)
 - **Backend:** n8n webhooks on top of Kiwi Tequila API (`one_per_city` param, "to anywhere" search)
-- **State:** cookie-based via `useItinerary` composable (array of `Leg` objects: code, date, lat, lng; `isFinished` flag for route completion)
+- **State:** cookie-based via `useItinerary` (solo / bookings). With `?room=`, PartyServer is source of truth for legs and mirrors into cookies.
 - **API wrapper:** `useAPI` composable wraps all n8n calls with `useFetch` + base URL from runtime config
 - **Airport search:** server endpoint `/api/airports` reads from `server/assets/airports.csv` via Nitro storage + PapaParse
-- **Deployment:** Netlify SSR (`nitro.preset: 'netlify'`), serverless functions for SSR + API routes. Production env var: `NUXT_PUBLIC_N8N_API`
+- **Deployment:** Netlify SSR (`nitro.preset: 'netlify'`), serverless functions for SSR + API routes. Production env vars: `NUXT_PUBLIC_N8N_API`, `NUXT_PUBLIC_COLLAB_HOST`
+- **Collab:** PartyServer on Cloudflare Workers (`workers/collab/server.ts` + `wrangler.jsonc`); run `pnpm dev:collab` alongside `pnpm dev`
 
 ## Date Conventions
 
@@ -35,11 +36,19 @@ pnpm install
 
 ## Development Server
 
-Start the development server on `http://127.0.0.1:3000`:
+Start the Nuxt app on `http://127.0.0.1:3000`:
 
 ```bash
 pnpm dev
 ```
+
+For couples share-link sync, also start the PartyServer worker (default `127.0.0.1:8787`):
+
+```bash
+pnpm dev:collab
+```
+
+First time: `npx wrangler login` (Cloudflare account). Production: `pnpm deploy:collab`, then set Netlify `NUXT_PUBLIC_COLLAB_HOST` to `collab.frame-shifter.workers.dev` (no `https://`).
 
 ## Production
 

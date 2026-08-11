@@ -7,6 +7,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       n8nApi: '', // set via NUXT_PUBLIC_N8N_API env var
+      // PartyServer Workers host (e.g. collab.frame-shifter.workers.dev)
+      collabHost: '', // set via NUXT_PUBLIC_COLLAB_HOST env var
       sentryEnvironment: process.env.CONTEXT === 'production'
         ? 'production'
         : process.env.CONTEXT === 'deploy-preview'
@@ -18,6 +20,7 @@ export default defineNuxtConfig({
     runtimeConfig: {
       public: {
         n8nApi: 'https://omnichronous.app.n8n.cloud/webhook',
+        collabHost: '127.0.0.1:8787',
       },
     },
   },
@@ -37,6 +40,7 @@ export default defineNuxtConfig({
         '@sentry/nuxt',
         '@vue/devtools-core',
         '@vue/devtools-kit',
+        'partysocket',
       ],
     },
   },

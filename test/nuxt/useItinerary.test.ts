@@ -35,4 +35,18 @@ describe('useItinerary', () => {
     addDestination('CDG', '04/01/2026', 49.01, 2.55)
     expect(currentOrigin.value).toBe('CDG')
   })
+
+  it('solo mode rejects addDestination after finish (same rules as the room reducer)', () => {
+    const { setOrigin, addDestination, markAsFinished, legs, isFinished } = useItinerary()
+    setOrigin('LHR', '01/01/2026', 51.47, -0.46)
+    addDestination('CDG', '04/01/2026', 49.01, 2.55)
+    markAsFinished()
+    expect(isFinished.value).toBe(true)
+
+    addDestination('AMS', '07/01/2026', 52.3, 4.76)
+
+    expect(legs.value).toHaveLength(2)
+    expect(legs.value.map(l => l.code)).toEqual(['LHR', 'CDG'])
+    expect(isFinished.value).toBe(true)
+  })
 })
